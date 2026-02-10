@@ -1,16 +1,35 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
 import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 
-const Stack = createNativeStackNavigator();
+// Definir tipos para navegação
+export type RootStackParamList = {
+  Welcome: undefined;
+  Login: undefined;
+  Register: undefined;
+};
 
-export default function App() {
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Welcome">
+      <Stack.Navigator 
+        initialRouteName="Welcome"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#1a73e8',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: '600',
+          },
+        }}
+      >
         <Stack.Screen 
           name="Welcome" 
           component={WelcomeScreen}
@@ -30,3 +49,5 @@ export default function App() {
     </NavigationContainer>
   );
 }
+
+export default App;
