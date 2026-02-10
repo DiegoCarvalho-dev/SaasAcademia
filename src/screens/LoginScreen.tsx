@@ -17,6 +17,7 @@ type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   Welcome: undefined;
+  MainTabs: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
@@ -30,17 +31,16 @@ export default function LoginScreen() {
 
   const handleLogin = () => {
     if (!email || !password) {
-      alert('Por favor, preencha todos os campos');
-      return;
+        alert('Por favor, preencha todos os campos');
+        return;
     }
 
     setLoading(true);
     setTimeout(() => {
-      setLoading(false);
-      alert('Login realizado com sucesso!');
-      // Navegar para Dashboard futuramente
+        setLoading(false);
+        navigation.navigate('MainTabs');
     }, 1500);
-  };
+    };
 
   const handleGoogleLogin = () => {
     alert('Login com Google será implementado em breve');
