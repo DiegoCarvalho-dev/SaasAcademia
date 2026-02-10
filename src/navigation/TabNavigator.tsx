@@ -2,10 +2,12 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 
+// Importar as telas que EXISTEM na sua pasta screens
 import DashboardScreen from '../screens/DashboardScreen';
 import WorkoutsScreen from '../screens/WorkoutsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
+// Criar o navegador de abas
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
@@ -31,6 +33,7 @@ export default function TabNavigator() {
         },
       }}
     >
+      {/* Aba 1: Dashboard/Início */}
       <Tab.Screen 
         name="Dashboard" 
         component={DashboardScreen}
@@ -41,6 +44,8 @@ export default function TabNavigator() {
           ),
         }}
       />
+      
+      {/* Aba 2: Treinos */}
       <Tab.Screen 
         name="Workouts" 
         component={WorkoutsScreen}
@@ -51,6 +56,8 @@ export default function TabNavigator() {
           ),
         }}
       />
+      
+      {/* Aba 3: Perfil */}
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
