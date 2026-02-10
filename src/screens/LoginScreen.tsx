@@ -5,133 +5,260 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+type RootStackParamList = {
+  Login: undefined;
+  Register: undefined;
+  Welcome: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
 export default function LoginScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = () => {
     if (!email || !password) {
-      Alert.alert('Erro', 'Preencha todos os campos');
+      alert('Por favor, preencha todos os campos');
       return;
     }
 
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      Alert.alert('Sucesso', 'Login realizado!');
-      // Navegar para dashboard depois
-    }, 2000);
+      alert('Login realizado com sucesso!');
+      // Navegar para Dashboard futuramente
+    }, 1500);
   };
 
   const handleGoogleLogin = () => {
-    Alert.alert('Google Login', 'Integração com Google em breve');
+    alert('Login com Google será implementado em breve');
+  };
+
+  const handleForgotPassword = () => {
+    alert('Funcionalidade de recuperação de senha em breve');
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>Login</Text>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Senha"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-        
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>
-            {loading ? 'ENTRANDO...' : 'ENTRAR'}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Login</Text>
+          <Text style={styles.subtitle}>
+            Acesse sua conta para continuar
           </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
-          <Text style={styles.googleButtonText}>Entrar com Google</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.link}>Não tem conta? Cadastre-se</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+        </View>
+
+        <View style={styles.formContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="seu@email.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <View style={styles.passwordHeader}>
+              <Text style={styles.label}>Senha</Text>
+              <TouchableOpacity onPress={handleForgotPassword}>
+                <Text style={styles.forgotPassword}>Esqueceu a senha?</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Digite sua senha"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              style={styles.showPasswordButton}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Text style={styles.showPasswordText}>
+                {showPassword ? 'Ocultar' : 'Mostrar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.loginButton, loading && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text style={styles.loginButtonText}>Entrar</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>ou</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleLogin}
+          >
+            <Text style={styles.googleButtonText}>Continuar com Google</Text>
+          </TouchableOpacity>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Não tem uma conta?</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.registerLink}> Cadastre-se</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
   },
-  content: {
+  keyboardView: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+  },
+  header: {
+    padding: 24,
+    paddingTop: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1a73e8',
-    textAlign: 'center',
-    marginBottom: 30,
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#636e72',
+  },
+  formContainer: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 0,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2d3436',
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  button: {
-    backgroundColor: '#1a73e8',
+    borderColor: '#dfe6e9',
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    backgroundColor: '#f8f9fa',
+  },
+  passwordHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  forgotPassword: {
+    fontSize: 14,
+    color: '#1a73e8',
+    fontWeight: '500',
+  },
+  showPasswordButton: {
+    position: 'absolute',
+    right: 16,
+    top: 44,
+  },
+  showPasswordText: {
+    fontSize: 14,
+    color: '#636e72',
+    fontWeight: '500',
+  },
+  loginButton: {
+    backgroundColor: '#1a73e8',
+    borderRadius: 12,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  buttonDisabled: {
+    backgroundColor: '#90caf9',
+  },
+  loginButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 32,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#dfe6e9',
+  },
+  dividerText: {
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: '#636e72',
   },
   googleButton: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#dfe6e9',
+    borderRadius: 12,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
   },
   googleButtonText: {
-    color: '#333',
+    color: '#2d3436',
     fontSize: 16,
+    fontWeight: '500',
   },
-  link: {
-    color: '#1a73e8',
-    textAlign: 'center',
-    marginTop: 20,
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 32,
+  },
+  footerText: {
     fontSize: 14,
+    color: '#636e72',
+  },
+  registerLink: {
+    fontSize: 14,
+    color: '#1a73e8',
+    fontWeight: '600',
   },
 });
