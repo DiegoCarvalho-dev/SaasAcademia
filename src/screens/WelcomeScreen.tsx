@@ -4,13 +4,23 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
+  SafeAreaView,
+  StatusBar,
   Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+type RootStackParamList = {
+  Welcome: undefined;
+  Login: undefined;
+  Register: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Welcome'>;
 
 export default function WelcomeScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const [loading, setLoading] = useState(false);
 
   const handleLogin = () => {
@@ -18,7 +28,7 @@ export default function WelcomeScreen() {
     setTimeout(() => {
       setLoading(false);
       navigation.navigate('Login');
-    }, 1000);
+    }, 500);
   };
 
   const handleRegister = () => {
@@ -26,98 +36,189 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>🏋️‍♂️ Gym App</Text>
-        <Text style={styles.subtitle}>Seu Personal na Palma da Mão</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1a73e8" />
+      
+      <View style={styles.header}>
+        <Text style={styles.logo}>GYM</Text>
+        <Text style={styles.logoSubtitle}>PRO</Text>
+      </View>
 
-        <View style={styles.features}>
-          <Text style={styles.feature}>✓ Personal cria treinos</Text>
-          <Text style={styles.feature}>✓ Aluno acompanha evolução</Text>
-          <Text style={styles.feature}>✓ Treinos com séries e repetições</Text>
-          <Text style={styles.feature}>✓ Login com Google</Text>
+      <View style={styles.content}>
+        <View style={styles.heroSection}>
+          <Text style={styles.heroTitle}>
+            Transforme sua experiência na academia
+          </Text>
+          <Text style={styles.heroSubtitle}>
+            Controle completo para personal trainers e alunos
+          </Text>
         </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.loginButton]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? 'CARREGANDO...' : 'FAZER LOGIN'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.featuresContainer}>
+          <View style={styles.featureCard}>
+            <View style={styles.featureIcon}>
+              <Text style={styles.iconText}>👨‍🏫</Text>
+            </View>
+            <Text style={styles.featureTitle}>Personal Trainer</Text>
+            <Text style={styles.featureDescription}>
+              Crie e gerencie treinos personalizados para seus alunos
+            </Text>
+          </View>
 
-        <TouchableOpacity
-          style={[styles.button, styles.registerButton]}
-          onPress={handleRegister}
-        >
-          <Text style={styles.registerButtonText}>CRIAR CONTA</Text>
-        </TouchableOpacity>
+          <View style={styles.featureCard}>
+            <View style={styles.featureIcon}>
+              <Text style={styles.iconText}>🏋️‍♂️</Text>
+            </View>
+            <Text style={styles.featureTitle}>Aluno</Text>
+            <Text style={styles.featureDescription}>
+              Acompanhe seus treinos, séries e evolução
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity
+            style={[styles.button, styles.primaryButton]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            <Text style={styles.primaryButtonText}>
+              {loading ? 'Carregando...' : 'Login'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={handleRegister}
+          >
+            <Text style={styles.secondaryButtonText}>Criar Conta</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.footerText}>
+          Ao continuar, você concorda com nossos Termos e Política de Privacidade
+        </Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 20,
+    paddingBottom: 10,
     backgroundColor: '#1a73e8',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+  logo: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  logoSubtitle: {
+    fontSize: 32,
+    fontWeight: '300',
+    color: '#ffffff',
+    marginLeft: 5,
   },
   content: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
+    padding: 24,
+  },
+  heroSection: {
     alignItems: 'center',
+    marginTop: 40,
+    marginBottom: 50,
   },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: 'white',
+  heroTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#2d3436',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
+    lineHeight: 34,
   },
-  subtitle: {
-    fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  features: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 40,
-    width: '100%',
-  },
-  feature: {
+  heroSubtitle: {
     fontSize: 16,
-    color: 'white',
-    marginBottom: 10,
+    color: '#636e72',
+    textAlign: 'center',
+    lineHeight: 24,
   },
-  button: {
-    width: '100%',
-    paddingVertical: 16,
-    borderRadius: 10,
+  featuresContainer: {
+    marginBottom: 40,
+  },
+  featureCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  featureIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#e3f2fd',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 12,
   },
-  loginButton: {
-    backgroundColor: 'white',
+  iconText: {
+    fontSize: 24,
   },
-  registerButton: {
-    backgroundColor: 'transparent',
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a73e8',
+    marginBottom: 8,
+  },
+  featureDescription: {
+    fontSize: 14,
+    color: '#636e72',
+    lineHeight: 20,
+  },
+  buttonsContainer: {
+    marginTop: 20,
+  },
+  button: {
+    height: 56,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  primaryButton: {
+    backgroundColor: '#1a73e8',
+  },
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    backgroundColor: '#ffffff',
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: '#1a73e8',
   },
-  buttonText: {
+  secondaryButtonText: {
     color: '#1a73e8',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  registerButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  footerText: {
+    fontSize: 12,
+    color: '#95a5a6',
+    textAlign: 'center',
+    marginTop: 30,
+    lineHeight: 16,
   },
 });
