@@ -1,94 +1,68 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View } from 'react-native';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 
-// Importar as telas
+// Screens
 import DashboardScreen from '../screens/DashboardScreen';
+import PersonalDashboardScreen from '../screens/PersonalDashboardScreen';
 import WorkoutsScreen from '../screens/WorkoutsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
-// Definir tipos
-type TabParamList = {
-  Dashboard: undefined;
-  Workouts: undefined;
-  Profile: undefined;
-};
-
-const Tab = createBottomTabNavigator<TabParamList>();
-
-// Componente para ícone com emoji CORRETAMENTE encapsulado
-interface TabIconProps {
-  emoji: string;
-  color: string;
-  focused: boolean;
-}
-
-const TabIcon: React.FC<TabIconProps> = ({ emoji, color, focused }) => {
-  return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: 24, color }}>
-        {emoji}
-      </Text>
-    </View>
-  );
-};
+const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
+  const userType = 'personal';
+
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#1a73e8',
-        tabBarInactiveTintColor: '#666',
+        headerShown: false,
+        tabBarActiveTintColor: '#2563eb',
+        tabBarInactiveTintColor: '#6b7280',
         tabBarStyle: {
           backgroundColor: '#ffffff',
           borderTopWidth: 1,
-          borderTopColor: '#e0e0e0',
-          height: 60,
+          borderTopColor: '#e5e7eb',
           paddingBottom: 8,
           paddingTop: 8,
+          height: 60,
         },
-        headerStyle: {
-          backgroundColor: '#1a73e8',
-        },
-        headerTintColor: '#fff',
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
-        tabBarIconStyle: {
-          marginTop: 4,
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
         },
       }}
     >
-      <Tab.Screen 
-        name="Dashboard" 
-        component={DashboardScreen}
+      <Tab.Screen
+        name="Dashboard"
+        component={userType === 'personal' ? PersonalDashboardScreen : DashboardScreen}
         options={{
-          title: 'Início',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="🏠" color={color} focused={focused} />
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="dashboard" size={size} color={color} />
           ),
+          tabBarLabel: 'Início',
         }}
       />
       
-      <Tab.Screen 
-        name="Workouts" 
+      <Tab.Screen
+        name="Workouts"
         component={WorkoutsScreen}
         options={{
-          title: 'Treinos',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="🏋️‍♂️" color={color} focused={focused} />
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="fitness-center" size={size} color={color} />
           ),
+          tabBarLabel: 'Treinos',
         }}
       />
       
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
         options={{
-          title: 'Perfil',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="👤" color={color} focused={focused} />
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="person" size={size} color={color} />
           ),
+          tabBarLabel: 'Perfil',
         }}
       />
     </Tab.Navigator>
