@@ -145,16 +145,15 @@ export default function DashboardScreen() {
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Olá, {userData.name}</Text>
+            <Text style={styles.greeting}>Olá, {userData.name.split(' ')[0]}</Text>
             <View style={styles.userTypeContainer}>
               <Text style={styles.userType}>Aluno</Text>
             </View>
             {user.personalId && personalName && (
               <View style={styles.personalBadge}>
-                <Icon name="fitness-center" size={14} color="#2563eb" />
-                <Text style={styles.personalBadgeText}>
-                  Personal: {personalName}
-                </Text>
+                <Icon name="fitness-center" size={14} color="#6b7280" />
+                <Text style={styles.personalBadgeText}>Personal: {personalName}</Text>
+                  Personal: {personalName}               
               </View>
             )}
           </View>
@@ -343,7 +342,7 @@ const styles = StyleSheet.create({
   },
   personalBadgeText: {
     fontSize: 13,
-    color: '#2563eb',
+    color: '#6b7280',
     fontWeight: '500',
     marginLeft: 6,
   },

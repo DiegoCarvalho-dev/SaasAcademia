@@ -200,7 +200,7 @@ export default function PersonalDashboardScreen() {
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Olá, {personalData.nome}</Text>
+            <Text style={styles.greeting}>Olá, {personalData.nome.split(' ')[0]}</Text>
             <View style={styles.userTypeContainer}>
               <Text style={styles.userType}>Personal Trainer</Text>
             </View>
