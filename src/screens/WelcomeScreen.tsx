@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
-  Image,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';;
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -39,66 +39,71 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a73e8" />
       
-      <View style={styles.header}>
-        <Text style={styles.logo}>GYM</Text>
-        <Text style={styles.logoSubtitle}>PRO</Text>
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.heroSection}>
-          <Text style={styles.heroTitle}>
-            Transforme sua experiência na academia
-          </Text>
-          <Text style={styles.heroSubtitle}>
-            Controle completo para personal trainers e alunos
-          </Text>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={styles.logo}>GYM</Text>
+          <Text style={styles.logoSubtitle}>PRO</Text>
         </View>
 
-        <View style={styles.featuresContainer}>
-          <View style={styles.featureCard}>
-            <View style={styles.featureIcon}>
-              <Text style={styles.iconText}>👨‍🏫</Text>
-            </View>
-            <Text style={styles.featureTitle}>Personal Trainer</Text>
-            <Text style={styles.featureDescription}>
-              Crie e gerencie treinos personalizados para seus alunos
+        <View style={styles.content}>
+          <View style={styles.heroSection}>
+            <Text style={styles.heroTitle}>
+              Transforme sua experiência na academia
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              Controle completo para personal trainers e alunos
             </Text>
           </View>
 
-          <View style={styles.featureCard}>
-            <View style={styles.featureIcon}>
-              <Text style={styles.iconText}>🏋️‍♂️</Text>
+          <View style={styles.featuresContainer}>
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Text style={styles.iconText}>👨‍🏫</Text>
+              </View>
+              <Text style={styles.featureTitle}>Personal Trainer</Text>
+              <Text style={styles.featureDescription}>
+                Crie e gerencie treinos personalizados para seus alunos
+              </Text>
             </View>
-            <Text style={styles.featureTitle}>Aluno</Text>
-            <Text style={styles.featureDescription}>
-              Acompanhe seus treinos, séries e evolução
-            </Text>
+
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Text style={styles.iconText}>🏋️‍♂️</Text>
+              </View>
+              <Text style={styles.featureTitle}>Aluno</Text>
+              <Text style={styles.featureDescription}>
+                Acompanhe seus treinos, séries e evolução
+              </Text>
+            </View>
           </View>
+
+          <View style={styles.buttonsContainer}>
+            <TouchableOpacity
+              style={[styles.button, styles.primaryButton]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              <Text style={styles.primaryButtonText}>
+                {loading ? 'Carregando...' : 'Login'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
+              onPress={handleRegister}
+            >
+              <Text style={styles.secondaryButtonText}>Criar Conta</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.footerText}>
+            Ao continuar, você concorda com nossos Termos e Política de Privacidade
+          </Text>
         </View>
-
-        <View style={styles.buttonsContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <Text style={styles.primaryButtonText}>
-              {loading ? 'Carregando...' : 'Login'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={handleRegister}
-          >
-            <Text style={styles.secondaryButtonText}>Criar Conta</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.footerText}>
-          Ao continuar, você concorda com nossos Termos e Política de Privacidade
-        </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -107,6 +112,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  scrollContent: {
+    flexGrow: 1, // Faz o conteúdo expandir dentro do ScrollView
   },
   header: {
     flexDirection: 'row',
