@@ -29,18 +29,29 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const validateEmail = (email: string) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
+
   const handleLogin = () => {
-    if (!email || !password) {
-        alert('Por favor, preencha todos os campos');
-        return;
+    if (!validateEmail(email)) {
+      alert('Por favor, insira um email válido (ex: usuario@gmail.com)');
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      alert('A senha deve ter pelo menos 6 caracteres');
+      return;
     }
 
     setLoading(true);
+    
     setTimeout(() => {
-        setLoading(false);
-        navigation.navigate('MainTabs');
+      setLoading(false);
+      navigation.navigate('MainTabs');
     }, 1500);
-    };
+  };
 
   const handleGoogleLogin = () => {
     alert('Login com Google será implementado em breve');
@@ -68,7 +79,7 @@ export default function LoginScreen() {
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="seu@email.com"
+              placeholder="exemplo@gmail.com"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
