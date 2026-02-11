@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
 
 // Screens
 import DashboardScreen from '../screens/DashboardScreen';
@@ -11,7 +12,9 @@ import ProfileScreen from '../screens/ProfileScreen';
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-  const userType = 'personal';
+  const { user } = useAuth();
+  
+  const userType = user?.type || 'aluno';
 
   return (
     <Tab.Navigator
@@ -33,6 +36,7 @@ export default function TabNavigator() {
         },
       }}
     >
+      {/* Dashboard condicional */}
       <Tab.Screen
         name="Dashboard"
         component={userType === 'personal' ? PersonalDashboardScreen : DashboardScreen}
@@ -44,6 +48,7 @@ export default function TabNavigator() {
         }}
       />
       
+      {/* Treinos */}
       <Tab.Screen
         name="Workouts"
         component={WorkoutsScreen}
@@ -55,6 +60,7 @@ export default function TabNavigator() {
         }}
       />
       
+      {/* Perfil  */}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
