@@ -1,14 +1,37 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 
-// Importar as telas que EXISTEM na sua pasta screens
+// Importar as telas
 import DashboardScreen from '../screens/DashboardScreen';
 import WorkoutsScreen from '../screens/WorkoutsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
-// Criar o navegador de abas
-const Tab = createBottomTabNavigator();
+// Definir tipos
+type TabParamList = {
+  Dashboard: undefined;
+  Workouts: undefined;
+  Profile: undefined;
+};
+
+const Tab = createBottomTabNavigator<TabParamList>();
+
+// Componente para ícone com emoji CORRETAMENTE encapsulado
+interface TabIconProps {
+  emoji: string;
+  color: string;
+  focused: boolean;
+}
+
+const TabIcon: React.FC<TabIconProps> = ({ emoji, color, focused }) => {
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ fontSize: 24, color }}>
+        {emoji}
+      </Text>
+    </View>
+  );
+};
 
 export default function TabNavigator() {
   return (
@@ -31,40 +54,40 @@ export default function TabNavigator() {
         headerTitleStyle: {
           fontWeight: '600',
         },
+        tabBarIconStyle: {
+          marginTop: 4,
+        },
       }}
     >
-      {/* Aba 1: Dashboard/Início */}
       <Tab.Screen 
         name="Dashboard" 
         component={DashboardScreen}
         options={{
           title: 'Início',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size - 4 }}>🏠</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="🏠" color={color} focused={focused} />
           ),
         }}
       />
       
-      {/* Aba 2: Treinos */}
       <Tab.Screen 
         name="Workouts" 
         component={WorkoutsScreen}
         options={{
           title: 'Treinos',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size - 4 }}>🏋️‍♂️</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="🏋️‍♂️" color={color} focused={focused} />
           ),
         }}
       />
       
-      {/* Aba 3: Perfil */}
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size - 4 }}>👤</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="👤" color={color} focused={focused} />
           ),
         }}
       />
