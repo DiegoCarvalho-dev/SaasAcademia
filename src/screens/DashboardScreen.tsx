@@ -10,6 +10,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
+import UserService from '../services/userService';
 
 const StatIcon = ({ type }: { type: string }) => {
   const getIcon = () => {
@@ -47,7 +49,9 @@ const ActionIcon = ({ name, color }: { name: string; color: string }) => {
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [personalName, setPersonalName] = useState('');
   const [userData, setUserData] = useState<{
     name: string;
     type: 'aluno' | 'personal';
@@ -66,24 +70,33 @@ export default function DashboardScreen() {
   } | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setUserData({
-        name: 'Usuário',
-        type: 'aluno',
-        stats: {
-          completedWorkouts: 0,
-          currentStreak: 0,
-          totalWeight: 0,
-          caloriesBurned: 0,
-        },
-        nextWorkout: null,
-        monthlyProgress: 0,
-      });
-      setLoading(false);
-    }, 1000);
+    async function loadUserData() {
+      if (user) {
+        if (user.personalId) {
+          const personal = await UserService.getPersonalById(user.personalId);
+          if (personal) {
+            setPersonalName(personal.name);
+          }
+        }
 
-    return () => clearTimeout(timer);
-  }, []);
+        setUserData({
+          name: user.name,
+          type: 'aluno',
+          stats: {
+            completedWorkouts: 0,
+            currentStreak: 0,
+            totalWeight: 0,
+            caloriesBurned: 0,
+          },
+          nextWorkout: null,
+          monthlyProgress: 0,
+        });
+      }
+      setLoading(false);
+    }
+
+    loadUserData();
+  }, [user]);
 
   if (loading) {
     return (
@@ -96,7 +109,7 @@ export default function DashboardScreen() {
     );
   }
 
-  if (!userData) {
+  if (!userData || !user) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
@@ -110,26 +123,10 @@ export default function DashboardScreen() {
   }
 
   const stats = [
-    { 
-      key: 'workouts', 
-      label: 'Treinos Concluídos', 
-      value: userData.stats.completedWorkouts.toString()
-    },
-    { 
-      key: 'streak', 
-      label: 'Dias Consecutivos', 
-      value: userData.stats.currentStreak.toString()
-    },
-    { 
-      key: 'weight', 
-      label: 'Peso Total', 
-      value: userData.stats.totalWeight > 0 ? `${userData.stats.totalWeight} kg` : '0 kg'
-    },
-    { 
-      key: 'calories', 
-      label: 'Calorias Queimadas', 
-      value: userData.stats.caloriesBurned > 0 ? `${userData.stats.caloriesBurned} kcal` : '0 kcal'
-    },
+    { key: 'workouts', label: 'Treinos Concluídos', value: userData.stats.completedWorkouts.toString() },
+    { key: 'streak', label: 'Dias Consecutivos', value: userData.stats.currentStreak.toString() },
+    { key: 'weight', label: 'Peso Total', value: userData.stats.totalWeight > 0 ? `${userData.stats.totalWeight} kg` : '0 kg' },
+    { key: 'calories', label: 'Calorias Queimadas', value: userData.stats.caloriesBurned > 0 ? `${userData.stats.caloriesBurned} kcal` : '0 kcal' },
   ];
 
   const quickActions = [
@@ -146,15 +143,20 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Olá, {userData.name}</Text>
             <View style={styles.userTypeContainer}>
-              <Text style={styles.userType}>
-                {userData.type === 'aluno' ? 'Aluno' : 'Personal Trainer'}
-              </Text>
+              <Text style={styles.userType}>Aluno</Text>
             </View>
+            {user.personalId && personalName && (
+              <View style={styles.personalBadge}>
+                <Icon name="fitness-center" size={14} color="#2563eb" />
+                <Text style={styles.personalBadgeText}>
+                  Personal: {personalName}
+                </Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity 
             style={styles.profileButton}
@@ -168,7 +170,6 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Stats Grid */}
         <View style={styles.statsContainer}>
           <Text style={styles.sectionTitle}>Seu Progresso</Text>
           <View style={styles.statsGrid}>
@@ -184,16 +185,13 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Progress */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Progresso do Mês</Text>
             <Text style={styles.progressPercent}>{userData.monthlyProgress}%</Text>
           </View>
           <View style={styles.progressBar}>
-            <View 
-              style={[styles.progressFill, { width: `${userData.monthlyProgress}%` }]} 
-            />
+            <View style={[styles.progressFill, { width: `${userData.monthlyProgress}%` }]} />
           </View>
           <Text style={styles.progressHint}>
             {userData.monthlyProgress === 0 
@@ -202,7 +200,6 @@ export default function DashboardScreen() {
           </Text>
         </View>
 
-        {/* Next Workout */}
         {userData.nextWorkout ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -216,7 +213,7 @@ export default function DashboardScreen() {
                 <Text style={styles.workoutName}>{userData.nextWorkout.name}</Text>
                 <View style={styles.workoutMeta}>
                   <View style={styles.timeBadge}>
-                    <Icon name="access-time" size={12} color="#166534" style={styles.timeIcon} />
+                    <Icon name="access-time" size={12} color="#166534" />
                     <Text style={styles.timeBadgeText}>{userData.nextWorkout.time}</Text>
                   </View>
                 </View>
@@ -235,20 +232,12 @@ export default function DashboardScreen() {
               </View>
               <Text style={styles.emptyStateTitle}>Nenhum treino agendado</Text>
               <Text style={styles.emptyStateText}>
-                {userData.type === 'aluno'
-                  ? 'Seu personal ainda não criou um treino para você.'
-                  : 'Você ainda não criou treinos para seus alunos.'}
+                Seu personal ainda não criou um treino para você.
               </Text>
-              {userData.type === 'personal' && (
-                <TouchableOpacity style={styles.createWorkoutButton}>
-                  <Text style={styles.createWorkoutText}>Criar Primeiro Treino</Text>
-                </TouchableOpacity>
-              )}
             </View>
           </View>
         )}
 
-        {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ações Rápidas</Text>
           <View style={styles.actionsGrid}>
@@ -323,11 +312,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   greeting: {
     fontSize: 24,
@@ -341,12 +325,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     alignSelf: 'flex-start',
+    marginBottom: 8,
   },
   userType: {
     fontSize: 13,
     color: '#2563eb',
     fontWeight: '600',
-    letterSpacing: 0.5,
+  },
+  personalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  personalBadgeText: {
+    fontSize: 13,
+    color: '#2563eb',
+    fontWeight: '500',
+    marginLeft: 6,
   },
   profileButton: {
     width: 44,
@@ -355,11 +354,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563eb',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   profileInitial: {
     width: 40,
@@ -387,7 +381,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
     marginBottom: 16,
-    letterSpacing: -0.3,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -410,12 +403,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: '#111827',
-    letterSpacing: -0.5,
   },
   statLabel: {
     fontSize: 13,
     color: '#6b7280',
-    lineHeight: 16,
     fontWeight: '500',
   },
   section: {
@@ -452,7 +443,6 @@ const styles = StyleSheet.create({
   progressHint: {
     fontSize: 13,
     color: '#6b7280',
-    fontStyle: 'normal',
     fontWeight: '500',
   },
   dayBadge: {
@@ -497,30 +487,22 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
   },
-  timeIcon: {
-    marginRight: 4,
-  },
   timeBadgeText: {
     fontSize: 12,
     color: '#166534',
     fontWeight: '600',
+    marginLeft: 4,
   },
   startButton: {
     backgroundColor: '#2563eb',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   startButtonText: {
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 14,
-    letterSpacing: 0.3,
   },
   emptyStateCard: {
     alignItems: 'center',
@@ -551,20 +533,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 20,
     fontWeight: '500',
-  },
-  createWorkoutButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  createWorkoutText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 14,
-    letterSpacing: 0.3,
   },
   actionsGrid: {
     flexDirection: 'row',
@@ -589,7 +558,6 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     textAlign: 'center',
     fontWeight: '600',
-    letterSpacing: 0.2,
   },
   footerSpace: {
     height: 10,

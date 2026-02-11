@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
+import UserService from '../services/userService';
 
 type Aluno = {
   id: string;
@@ -20,11 +22,9 @@ type Aluno = {
   progresso?: number;
 };
 
-const MOCK_ALUNOS: Aluno[] = [
-];
-
 export default function PersonalDashboardScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [personalData, setPersonalData] = useState<{
     nome: string;
@@ -36,20 +36,35 @@ export default function PersonalDashboardScreen() {
   } | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    async function loadPersonalData() {
+      if (!user?.id) return;
+      
+      const alunos = await UserService.getAlunosByPersonal(user.id);
+      
+      const alunosFormatados: Aluno[] = alunos.map(a => ({
+        id: a.id,
+        nome: a.name,
+        status: a.status || 'sem_treino',
+        ultimoTreino: a.ultimoTreino,
+        progresso: a.progresso || 0,
+      }));
+
+      const ativos = alunosFormatados.filter(a => a.status === 'ativo').length;
+      const semTreino = alunosFormatados.filter(a => a.status === 'sem_treino').length;
+      
       setPersonalData({
-        nome: 'Usuário',
-        totalAlunos: 0,
-        treinosAtivos: 0,
+        nome: user.name,
+        totalAlunos: alunos.length,
+        treinosAtivos: ativos,
         treinosSemana: 0,
-        alunosSemTreino: 0,
-        alunos: [],
+        alunosSemTreino: semTreino,
+        alunos: alunosFormatados,
       });
       setLoading(false);
-    }, 800);
+    }
 
-    return () => clearTimeout(timer);
-  }, []);
+    loadPersonalData();
+  }, [user]);
 
   const handleCriarTreino = (alunoId: string, alunoNome: string) => {
     alert(`Criar treino para ${alunoNome}`);
@@ -112,7 +127,7 @@ export default function PersonalDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {item.progresso !== undefined && (
+        {item.progresso !== undefined && item.progresso > 0 && (
           <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressLabel}>Progresso</Text>
@@ -183,7 +198,6 @@ export default function PersonalDashboardScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Olá, {personalData.nome}</Text>
@@ -203,7 +217,6 @@ export default function PersonalDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <Text style={styles.sectionTitle}>Visão Geral</Text>
           <View style={styles.statsGrid}>
@@ -253,7 +266,6 @@ export default function PersonalDashboardScreen() {
           </View>
         </View>
 
-        {/* Ação Principal */}
         <View style={styles.primaryActionContainer}>
           <TouchableOpacity 
             style={styles.primaryButton}
@@ -267,13 +279,11 @@ export default function PersonalDashboardScreen() {
           </Text>
         </View>
 
-        {/* Lista de Alunos*/}
         <View style={styles.alunosSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <Icon  name="people-outline" size={20} color="#2563eb" style={{ marginTop: -14 }}
-/>
-              <Text style={styles.sectionTitle}>Meus Alunos</Text>
+              <Icon name="people-outline" size={20} color="#2563eb" />
+              <Text style={styles.sectionTitleText}>Meus Alunos</Text>
             </View>
             {personalData.alunos.length > 0 && (
               <Text style={styles.sectionCount}>{personalData.alunos.length}</Text>
@@ -367,11 +377,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   greeting: {
     fontSize: 24,
@@ -390,7 +395,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2563eb',
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
   profileButton: {
     width: 44,
@@ -399,11 +403,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563eb',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   profileInitial: {
     width: 40,
@@ -431,7 +430,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
     marginBottom: 16,
-    letterSpacing: -0.3,
   },
   statsGrid: {
     marginHorizontal: -6,
@@ -472,7 +470,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontWeight: '500',
   },
-  // AÇÃO PRINCIPAL
   primaryActionContainer: {
     backgroundColor: '#ffffff',
     marginTop: 8,
@@ -491,25 +488,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   primaryButtonText: {
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 16,
     marginLeft: 8,
-    letterSpacing: 0.3,
   },
   primaryButtonHint: {
     fontSize: 12,
     color: '#6b7280',
     marginTop: 12,
   },
-  // SEÇÃO DE ALUNOS
   alunosSection: {
     backgroundColor: '#ffffff',
     marginTop: 8,
@@ -527,9 +517,13 @@ const styles = StyleSheet.create({
   sectionTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
   },
+  sectionTitleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginLeft: 8,
+    },
   sectionCount: {
     fontSize: 14,
     fontWeight: '600',
@@ -539,7 +533,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
-  // EMPTY STATE
   emptyStateContainer: {
     alignItems: 'center',
     padding: 32,
@@ -581,7 +574,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginLeft: 8,
   },
-  // CARD DE ALUNO
   alunoCard: {
     backgroundColor: '#f8fafc',
     borderRadius: 12,

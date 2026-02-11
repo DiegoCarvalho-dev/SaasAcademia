@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
+import UserService, { User } from '../services/userService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
@@ -32,9 +33,23 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const [personais, setPersonais] = useState<User[]>([]);
+  const [selectedPersonalId, setSelectedPersonalId] = useState<string>('');
+  const [loadingPersonais, setLoadingPersonais] = useState(true);
+
+  useEffect(() => {
+    async function loadPersonais() {
+      setLoadingPersonais(true);
+      await UserService.criarPersonaisMock();
+      const listaPersonais = await UserService.getPersonais();
+      setPersonais(listaPersonais);
+      setLoadingPersonais(false);
+    }
+    loadPersonais();
+  }, []);
 
   const handleRegister = async () => {
-    // Validações
     if (!name.trim()) {
       Alert.alert('Erro', 'Por favor, informe seu nome');
       return;
@@ -60,9 +75,14 @@ export default function RegisterScreen() {
       return;
     }
 
+    if (userType === 'aluno' && !selectedPersonalId) {
+      Alert.alert('Erro', 'Selecione um personal trainer para te acompanhar');
+      return;
+    }
+
     try {
       setLoading(true);
-      await signUp(name, email, password, userType);
+      await signUp(name, email, password, userType, selectedPersonalId);
       
       Alert.alert(
         'Sucesso!',
@@ -97,7 +117,6 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.formContainer}>
-            {/* Campo Nome */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nome Completo</Text>
               <TextInput
@@ -110,7 +129,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Campo Email */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <TextInput
@@ -125,7 +143,6 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Campo Senha */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Senha</Text>
               <View style={styles.passwordContainer}>
@@ -148,7 +165,6 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Campo Confirmar Senha */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Confirmar Senha</Text>
               <View style={styles.passwordContainer}>
@@ -171,7 +187,6 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Seleção de Tipo de Usuário */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tipo de Usuário</Text>
               <View style={styles.userTypeContainer}>
@@ -219,7 +234,54 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Botão de Registrar */}
+            {userType === 'aluno' && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Seu Personal Trainer</Text>
+                <Text style={styles.hintText}>
+                  Escolha o profissional que vai acompanhar seus treinos
+                </Text>
+                
+                {loadingPersonais ? (
+                  <ActivityIndicator size="small" color="#2563eb" style={styles.personalLoader} />
+                ) : (
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.personalScroll}
+                  >
+                    {personais.map((personal) => (
+                      <TouchableOpacity
+                        key={personal.id}
+                        style={[
+                          styles.personalCard,
+                          selectedPersonalId === personal.id && styles.personalCardActive
+                        ]}
+                        onPress={() => setSelectedPersonalId(personal.id)}
+                      >
+                        <View style={[
+                          styles.personalAvatar,
+                          { backgroundColor: selectedPersonalId === personal.id ? '#2563eb' : '#e5e7eb' }
+                        ]}>
+                          <Text style={[
+                            styles.personalAvatarText,
+                            { color: selectedPersonalId === personal.id ? '#ffffff' : '#6b7280' }
+                          ]}>
+                            {personal.name.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        <Text style={[
+                          styles.personalName,
+                          selectedPersonalId === personal.id && styles.personalNameActive
+                        ]}>
+                          {personal.name.split(' ')[0]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            )}
+
             <TouchableOpacity
               style={[styles.registerButton, loading && styles.buttonDisabled]}
               onPress={handleRegister}
@@ -232,7 +294,6 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Link para Login */}
             <View style={styles.footer}>
               <Text style={styles.footerText}>Já tem uma conta?</Text>
               <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -283,6 +344,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1f2937',
+    marginBottom: 8,
+  },
+  hintText: {
+    fontSize: 13,
+    color: '#6b7280',
     marginBottom: 8,
   },
   input: {
@@ -346,6 +412,46 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  personalLoader: {
+    marginVertical: 20,
+  },
+  personalScroll: {
+    marginTop: 8,
+  },
+  personalCard: {
+    alignItems: 'center',
+    marginRight: 20,
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  personalCardActive: {
+    borderColor: '#2563eb',
+    backgroundColor: '#eff6ff',
+  },
+  personalAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  personalAvatarText: {
+    fontSize: 24,
+    fontWeight: '600',
+  },
+  personalName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4b5563',
+  },
+  personalNameActive: {
+    color: '#2563eb',
+    fontWeight: '600',
   },
   registerButton: {
     backgroundColor: '#2563eb',

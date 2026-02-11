@@ -6,13 +6,14 @@ type User = {
   name: string;
   email: string;
   type: 'aluno' | 'personal';
+  personalId?: string;
 };
 
 type AuthContextData = {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string, type: 'aluno' | 'personal') => Promise<void>;
+  signUp: (name: string, email: string, password: string, type: 'aluno' | 'personal', personalId?: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -81,7 +82,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-  async function signUp(name: string, email: string, password: string, type: 'aluno' | 'personal') {
+  async function signUp(
+    name: string, 
+    email: string, 
+    password: string, 
+    type: 'aluno' | 'personal',
+    personalId?: string
+  ) {
     try {
       setLoading(true);
 
@@ -99,6 +106,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
         type,
+        personalId: type === 'aluno' ? personalId : undefined,
+        status: 'sem_treino',
+        progresso: 0,
         createdAt: new Date().toISOString(),
       };
 
