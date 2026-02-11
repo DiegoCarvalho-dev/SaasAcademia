@@ -14,13 +14,16 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { RootStackParamList } from '../App';
+import { useAuth } from '../contexts/AuthContext';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
 
 export default function RegisterScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { signUp } = useAuth();
+  
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +33,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     // Validações
     if (!name.trim()) {
       Alert.alert('Erro', 'Por favor, informe seu nome');
@@ -57,22 +60,25 @@ export default function RegisterScreen() {
       return;
     }
 
-    setLoading(true);
-    
-    // Simulação de API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      setLoading(true);
+      await signUp(name, email, password, userType);
+      
       Alert.alert(
         'Sucesso!',
-        `Conta criada para ${name} como ${userType === 'personal' ? 'Personal Trainer' : 'Aluno'}`,
+        `Conta criada com sucesso! Bem-vindo, ${name}.`,
         [
           {
             text: 'OK',
-            onPress: () => navigation.navigate('Login'),
+            onPress: () => navigation.navigate('MainTabs'),
           },
         ]
       );
-    }, 2000);
+    } catch (error: any) {
+      Alert.alert('Erro', error.message || 'Falha ao criar conta. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,7 +87,10 @@ export default function RegisterScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
             <Text style={styles.title}>Criar Conta</Text>
             <Text style={styles.subtitle}>Preencha seus dados para começar</Text>
@@ -94,6 +103,7 @@ export default function RegisterScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Digite seu nome completo"
+                placeholderTextColor="#94a3b8"
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
@@ -106,6 +116,7 @@ export default function RegisterScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="seu@email.com"
+                placeholderTextColor="#94a3b8"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -121,6 +132,7 @@ export default function RegisterScreen() {
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
                   placeholder="Mínimo 6 caracteres"
+                  placeholderTextColor="#94a3b8"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -143,6 +155,7 @@ export default function RegisterScreen() {
                 <TextInput
                   style={[styles.input, styles.passwordInput]}
                   placeholder="Digite a senha novamente"
+                  placeholderTextColor="#94a3b8"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
@@ -169,8 +182,15 @@ export default function RegisterScreen() {
                   ]}
                   onPress={() => setUserType('personal')}
                 >
-                  <Text style={styles.userTypeEmoji}>👨‍🏫</Text>
-                  <Text style={styles.userTypeTitle}>Personal Trainer</Text>
+                  <View style={styles.userTypeIcon}>
+                    <Icon name="fitness-center" size={24} color={userType === 'personal' ? '#2563eb' : '#6b7280'} />
+                  </View>
+                  <Text style={[
+                    styles.userTypeTitle,
+                    userType === 'personal' && styles.userTypeTitleActive
+                  ]}>
+                    Personal Trainer
+                  </Text>
                   <Text style={styles.userTypeDescription}>
                     Criar e gerenciar treinos
                   </Text>
@@ -183,8 +203,15 @@ export default function RegisterScreen() {
                   ]}
                   onPress={() => setUserType('aluno')}
                 >
-                  <Text style={styles.userTypeEmoji}>🏋️‍♂️</Text>
-                  <Text style={styles.userTypeTitle}>Aluno</Text>
+                  <View style={styles.userTypeIcon}>
+                    <Icon name="directions-run" size={24} color={userType === 'aluno' ? '#2563eb' : '#6b7280'} />
+                  </View>
+                  <Text style={[
+                    styles.userTypeTitle,
+                    userType === 'aluno' && styles.userTypeTitleActive
+                  ]}>
+                    Aluno
+                  </Text>
                   <Text style={styles.userTypeDescription}>
                     Seguir e executar treinos
                   </Text>
@@ -237,12 +264,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#2d3436',
+    color: '#1f2937',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#636e72',
+    color: '#6b7280',
   },
   formContainer: {
     flex: 1,
@@ -255,16 +282,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2d3436',
+    color: '#1f2937',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#dfe6e9',
+    borderColor: '#e5e7eb',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f8fafc',
+    color: '#1f2937',
   },
   passwordContainer: {
     position: 'relative',
@@ -279,45 +307,48 @@ const styles = StyleSheet.create({
   },
   showPasswordText: {
     fontSize: 14,
-    color: '#1a73e8',
+    color: '#2563eb',
     fontWeight: '500',
   },
   userTypeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 8,
   },
   userTypeOption: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#dfe6e9',
+    borderColor: '#e5e7eb',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     marginHorizontal: 4,
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f8fafc',
   },
   userTypeOptionActive: {
-    borderColor: '#1a73e8',
-    backgroundColor: '#e8f0fe',
+    borderColor: '#2563eb',
+    backgroundColor: '#eff6ff',
   },
-  userTypeEmoji: {
-    fontSize: 32,
+  userTypeIcon: {
     marginBottom: 8,
   },
   userTypeTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#2d3436',
+    color: '#4b5563',
     marginBottom: 4,
     textAlign: 'center',
   },
+  userTypeTitleActive: {
+    color: '#2563eb',
+  },
   userTypeDescription: {
-    fontSize: 12,
-    color: '#636e72',
+    fontSize: 11,
+    color: '#6b7280',
     textAlign: 'center',
   },
   registerButton: {
-    backgroundColor: '#1a73e8',
+    backgroundColor: '#2563eb',
     borderRadius: 12,
     height: 56,
     alignItems: 'center',
@@ -325,7 +356,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   buttonDisabled: {
-    backgroundColor: '#90caf9',
+    backgroundColor: '#93c5fd',
   },
   registerButtonText: {
     color: '#ffffff',
@@ -340,11 +371,11 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#636e72',
+    color: '#6b7280',
   },
   loginLink: {
     fontSize: 14,
-    color: '#1a73e8',
+    color: '#2563eb',
     fontWeight: '600',
   },
 });
