@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { SafeAreaView as SafeArea } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
@@ -33,7 +33,7 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <SafeArea style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         {/* Header */}
         <View style={styles.header}>
@@ -120,7 +120,7 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Sair da Conta</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeArea>
+    </SafeAreaView>
   );
 }
 
