@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -67,7 +68,7 @@ export default function PersonalDashboardScreen() {
   }, [user]);
 
   const handleCriarTreino = (alunoId: string, alunoNome: string) => {
-  // @ts-ignore - Rota será tipada futuamente
+    // @ts-ignore - Rota será tipada futuramente
     navigation.navigate('CreateWorkout', { 
       alunoId, 
       alunoNome 
@@ -163,7 +164,10 @@ export default function PersonalDashboardScreen() {
       <Text style={styles.emptyStateText}>
         Adicione seu primeiro aluno para começar a criar treinos personalizados.
       </Text>
-      <TouchableOpacity style={styles.emptyStateButton}>
+      <TouchableOpacity 
+        style={styles.emptyStateButton}
+        onPress={() => Alert.alert('Em breve', 'Cadastro de aluno será implementado')}
+      >
         <Icon name="person-add" size={20} color="#ffffff" />
         <Text style={styles.emptyStateButtonText}>Cadastrar Aluno</Text>
       </TouchableOpacity>
@@ -273,13 +277,45 @@ export default function PersonalDashboardScreen() {
         <View style={styles.primaryActionContainer}>
           <TouchableOpacity 
             style={styles.primaryButton}
-            onPress={() => alert('Funcionalidade em desenvolvimento')}
+            onPress={() => {
+              if (personalData.alunos.length === 0) {
+                Alert.alert(
+                  'Nenhum aluno', 
+                  'Você precisa cadastrar um aluno primeiro.'
+                );
+                return;
+              }
+              
+              if (personalData.alunos.length === 1) {
+                const aluno = personalData.alunos[0];
+                // @ts-ignore
+                navigation.navigate('CreateWorkout', { 
+                  alunoId: aluno.id, 
+                  alunoNome: aluno.nome 
+                });
+              } else {
+                Alert.alert(
+                  'Selecionar Aluno',
+                  'Escolha um aluno para criar o treino:',
+                  personalData.alunos.map(aluno => ({
+                    text: aluno.nome,
+                    onPress: () => {
+                      // @ts-ignore
+                      navigation.navigate('CreateWorkout', { 
+                        alunoId: aluno.id, 
+                        alunoNome: aluno.nome 
+                      });
+                    }
+                  }))
+                );
+              }
+            }}
           >
             <Icon name="add-circle-outline" size={24} color="#ffffff" />
             <Text style={styles.primaryButtonText}>Criar novo treino</Text>
           </TouchableOpacity>
           <Text style={styles.primaryButtonHint}>
-            Selecione um aluno ou crie um treino do zero
+            Clique no botão "Criar" ao lado do aluno ou use este botão principal
           </Text>
         </View>
 
@@ -527,7 +563,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
     marginLeft: 8,
-    },
+  },
   sectionCount: {
     fontSize: 14,
     fontWeight: '600',
