@@ -5,145 +5,70 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  TextInput,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import TreinoService, { Treino, Exercicio } from '../services/treinoService';
+import TreinoService, { Treino } from '../services/treinoService';
+import UserService from '../services/userService';
 
-type RouteParams = {
-  treinoId: string;
-};
-
-export default function WorkoutDetailScreen() {
-  const route = useRoute();
+export default function WorkoutsScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
-  const { treinoId } = route.params as RouteParams;
-  
-  const [treino, setTreino] = useState<Treino | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cargaInput, setCargaInput] = useState<{[key: string]: string}>({});
+  const [treinos, setTreinos] = useState<Treino[]>([]);
+  const [alunosMap, setAlunosMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    carregarTreino();
-  }, [treinoId]);
+    carregarDados();
+  }, [user]);
 
-  const carregarTreino = async () => {
-    const treinos = await TreinoService.getAllTreinos();
-    const treinoEncontrado = treinos.find(t => t.id === treinoId);
-    setTreino(treinoEncontrado || null);
-    setLoading(false);
-  };
+  const carregarDados = async () => {
+    if (!user) return;
 
-  const handleConcluirExercicio = async (exercicioId: string) => {
-    if (!treino) return;
-    
-    await TreinoService.concluirExercicio(treino.id, exercicioId);
-    await carregarTreino();
-    
-    Alert.alert('✅', 'Exercício concluído!');
-  };
-
-  const handleSalvarCarga = async (exercicioId: string) => {
-    if (!treino || !cargaInput[exercicioId]) return;
-    
-    await TreinoService.adicionarCarga(
-      treino.id, 
-      exercicioId, 
-      cargaInput[exercicioId]
-    );
-    
-    await carregarTreino();
-    setCargaInput(prev => ({ ...prev, [exercicioId]: '' }));
-    
-    Alert.alert('💪', 'Carga registrada!');
-  };
-
-  const renderExercicio = (exercicio: Exercicio, index: number) => {
-    const isConcluido = exercicio.concluido;
-    const cargaAtual = exercicio.carga || cargaInput[exercicio.id] || '';
-
-    return (
-      <View 
-        key={exercicio.id} 
-        style={[styles.exerciseCard, isConcluido && styles.exerciseCardConcluido]}
-      >
-        <View style={styles.exerciseHeader}>
-          <View style={styles.exerciseTitleContainer}>
-            <Text style={styles.exerciseName}>{exercicio.nome}</Text>
-            {isConcluido && (
-              <View style={styles.concluidoBadge}>
-                <Icon name="check-circle" size={16} color="#10b981" />
-                <Text style={styles.concluidoText}>Concluído</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.exerciseSets}>
-            <Text style={styles.setsText}>{exercicio.series} séries</Text>
-          </View>
-        </View>
+    try {
+      if (user.type === 'aluno') {
+        const treinosAluno = await TreinoService.getTreinosByAluno(user.id);
+        setTreinos(treinosAluno);
+      } else {
+        const treinosPersonal = await TreinoService.getTreinosByPersonal(user.id);
         
-        <View style={styles.exerciseDetails}>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Repetições</Text>
-            <Text style={styles.detailValue}>{exercicio.repeticoes}</Text>
-          </View>
-          
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Descanso</Text>
-            <Text style={styles.detailValue}>{exercicio.descanso}</Text>
-          </View>
-          
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Carga</Text>
-            {cargaAtual ? (
-              <Text style={styles.detailValue}>{cargaAtual} kg</Text>
-            ) : (
-              <View style={styles.weightInputContainer}>
-                <TextInput
-                  style={styles.weightInput}
-                  placeholder="kg"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="numeric"
-                  value={cargaInput[exercicio.id]}
-                  onChangeText={(text) => 
-                    setCargaInput(prev => ({ ...prev, [exercicio.id]: text }))
-                  }
-                />
-                <TouchableOpacity
-                  style={styles.saveWeightButton}
-                  onPress={() => handleSalvarCarga(exercicio.id)}
-                >
-                  <Icon name="check" size={16} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {exercicio.observacao && (
-          <View style={styles.observacaoContainer}>
-            <Icon name="info-outline" size={14} color="#6b7280" />
-            <Text style={styles.observacaoText}>{exercicio.observacao}</Text>
-          </View>
-        )}
+        const alunos = await UserService.getAllUsers();
+        const map: Record<string, string> = {};
+        alunos.forEach(a => {
+          if (a.type === 'aluno') {
+            map[a.id] = a.name;
+          }
+        });
         
-        {!isConcluido && (
-          <TouchableOpacity
-            style={styles.concluirButton}
-            onPress={() => handleConcluirExercicio(exercicio.id)}
-          >
-            <Icon name="check-circle-outline" size={20} color="#2563eb" />
-            <Text style={styles.concluirButtonText}>Marcar como concluído</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
+        setAlunosMap(map);
+        setTreinos(treinosPersonal);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar treinos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDayColor = (dia: string) => {
+    const cores: Record<string, string> = {
+      'Segunda-feira': '#2563eb',
+      'Terça-feira': '#7c3aed',
+      'Quarta-feira': '#059669',
+      'Quinta-feira': '#d97706',
+      'Sexta-feira': '#dc2626',
+      'Sábado': '#9333ea',
+      'Domingo': '#b45309',
+    };
+    return cores[dia] || '#6b7280';
+  };
+
+  const handleVerTreino = (treinoId: string) => {
+    // @ts-ignore - Rota será tipada futuramente
+    navigation.navigate('WorkoutDetail', { treinoId });
   };
 
   if (loading) {
@@ -151,24 +76,7 @@ export default function WorkoutDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Carregando treino...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!treino) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Icon name="error-outline" size={48} color="#dc2626" />
-          <Text style={styles.errorText}>Treino não encontrado</Text>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>Voltar</Text>
-          </TouchableOpacity>
+          <Text style={styles.loadingText}>Carregando treinos...</Text>
         </View>
       </SafeAreaView>
     );
@@ -176,67 +84,124 @@ export default function WorkoutDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>
+          {user?.type === 'aluno' ? 'Meus Treinos' : 'Treinos Criados'}
+        </Text>
+        {user?.type === 'personal' && (
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => navigation.navigate('Dashboard' as never)}
+          >
+            <Icon name="add" size={24} color="#2563eb" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backIcon}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-back" size={24} color="#1f2937" />
-          </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <Text style={styles.workoutName}>{treino.nome}</Text>
-            <View style={styles.workoutMeta}>
-              <View style={styles.metaItem}>
-                <Icon name="access-time" size={16} color="#6b7280" />
-                <Text style={styles.metaText}>{treino.duracao}</Text>
-              </View>
-              <View style={styles.metaItem}>
-                <Icon name="fitness-center" size={16} color="#6b7280" />
-                <Text style={styles.metaText}>{treino.nivel}</Text>
-              </View>
+        {treinos.length === 0 ? (
+          <View style={styles.emptyStateContainer}>
+            <View style={styles.emptyStateIconContainer}>
+              <Icon name="fitness-center" size={48} color="#94a3b8" />
             </View>
-            <View style={styles.dayBadge}>
-              <Icon name="event" size={14} color="#2563eb" />
-              <Text style={styles.dayBadgeText}>{treino.diaSemana}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.progressSummary}>
-          <View style={styles.progressItem}>
-            <Text style={styles.progressLabel}>Exercícios</Text>
-            <Text style={styles.progressValue}>
-              {treino.exercicios.filter(e => e.concluido).length}/{treino.exercicios.length}
+            <Text style={styles.emptyStateTitle}>
+              {user?.type === 'aluno' 
+                ? 'Nenhum treino encontrado' 
+                : 'Você ainda não criou treinos'}
             </Text>
-          </View>
-          <View style={styles.progressDivider} />
-          <View style={styles.progressItem}>
-            <Text style={styles.progressLabel}>Progresso</Text>
-            <Text style={styles.progressValue}>
-              {Math.round((treino.exercicios.filter(e => e.concluido).length / treino.exercicios.length) * 100)}%
+            <Text style={styles.emptyStateText}>
+              {user?.type === 'aluno'
+                ? 'Seu personal ainda não criou nenhum treino para você.'
+                : 'Crie seu primeiro treino para um aluno começar a acompanhar.'}
             </Text>
+            {user?.type === 'personal' && (
+              <TouchableOpacity 
+                style={styles.emptyStateButton}
+                onPress={() => navigation.navigate('Dashboard' as never)}
+              >
+                <Icon name="add" size={20} color="#ffffff" />
+                <Text style={styles.emptyStateButtonText}>Criar treino</Text>
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
+        ) : (
+          <View style={styles.treinosContainer}>
+            <Text style={styles.sectionSubtitle}>
+              {user?.type === 'aluno' ? 'Seus treinos da semana' : `${treinos.length} treinos criados`}
+            </Text>
+            
+            {treinos.map((treino) => {
+              const progresso = treino.exercicios.length > 0
+                ? Math.round((treino.exercicios.filter(e => e.concluido).length / treino.exercicios.length) * 100)
+                : 0;
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Exercícios</Text>
-          {treino.exercicios.map((exercicio, index) => 
-            renderExercicio(exercicio, index)
-          )}
-        </View>
+              return (
+                <TouchableOpacity
+                  key={treino.id}
+                  style={styles.treinoCard}
+                  onPress={() => handleVerTreino(treino.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.treinoHeader}>
+                    <View style={[styles.dayBadge, { backgroundColor: getDayColor(treino.diaSemana) + '15' }]}>
+                      <Text style={[styles.dayBadgeText, { color: getDayColor(treino.diaSemana) }]}>
+                        {treino.diaSemana}
+                      </Text>
+                    </View>
+                    
+                    {user?.type === 'aluno' ? (
+                      <View style={styles.statusContainer}>
+                        {progresso === 100 ? (
+                          <View style={styles.concluidoBadge}>
+                            <Icon name="check-circle" size={14} color="#10b981" />
+                            <Text style={styles.concluidoText}>Concluído</Text>
+                          </View>
+                        ) : (
+                          <View style={styles.pendenteBadge}>
+                            <Icon name="schedule" size={14} color="#f59e0b" />
+                            <Text style={styles.pendenteText}>Em andamento</Text>
+                          </View>
+                        )}
+                      </View>
+                    ) : (
+                      <View style={styles.alunoInfo}>
+                        <Icon name="person" size={14} color="#2563eb" />
+                        <Text style={styles.alunoNome}>{alunosMap[treino.alunoId] || 'Aluno'}</Text>
+                      </View>
+                    )}
+                  </View>
 
-        {treino.notasPersonal && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Notas do Personal</Text>
-            <View style={styles.notesCard}>
-              <Icon name="fitness-center" size={20} color="#2563eb" />
-              <Text style={styles.notesText}>{treino.notasPersonal}</Text>
-            </View>
+                  <Text style={styles.treinoNome}>{treino.nome}</Text>
+                  
+                  <View style={styles.treinoMeta}>
+                    <View style={styles.metaItem}>
+                      <Icon name="fitness-center" size={14} color="#6b7280" />
+                      <Text style={styles.metaText}>{treino.exercicios.length} exercícios</Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                      <Icon name="access-time" size={14} color="#6b7280" />
+                      <Text style={styles.metaText}>{treino.duracao || '60 min'}</Text>
+                    </View>
+                  </View>
+
+                  {user?.type === 'aluno' && (
+                    <View style={styles.progressContainer}>
+                      <View style={styles.progressHeader}>
+                        <Text style={styles.progressLabel}>Progresso</Text>
+                        <Text style={styles.progressValue}>{progresso}%</Text>
+                      </View>
+                      <View style={styles.progressBar}>
+                        <View style={[styles.progressFill, { width: `${progresso}%` }]} />
+                      </View>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -259,149 +224,85 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748b',
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
   },
-  errorText: {
-    fontSize: 18,
-    color: '#dc2626',
-    marginTop: 16,
-    marginBottom: 24,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1f2937',
   },
-  backButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
+  headerButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#eff6ff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
   },
-  header: {
-    backgroundColor: '#ffffff',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+  scrollContent: {
+    paddingBottom: 20,
   },
-  backIcon: {
+  treinosContainer: {
+    padding: 20,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6b7280',
     marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  headerContent: {
-    alignItems: 'center',
-  },
-  workoutName: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 12,
-  },
-  workoutMeta: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 12,
-  },
-  metaText: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginLeft: 6,
-  },
-  dayBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  dayBadgeText: {
-    fontSize: 14,
-    color: '#2563eb',
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-  progressSummary: {
-    flexDirection: 'row',
+  treinoCard: {
     backgroundColor: '#ffffff',
-    marginTop: 8,
+    borderRadius: 16,
     padding: 20,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  progressItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  progressLabel: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  progressValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2563eb',
-  },
-  progressDivider: {
-    width: 1,
-    backgroundColor: '#e5e7eb',
-  },
-  section: {
-    backgroundColor: '#ffffff',
-    marginTop: 8,
-    padding: 20,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 20,
-  },
-  exerciseCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  exerciseCardConcluido: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
-  },
-  exerciseHeader: {
+  treinoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  exerciseTitleContainer: {
-    flex: 1,
+  dayBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  exerciseName: {
-    fontSize: 18,
+  dayBadgeText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 6,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   concluidoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   concluidoText: {
     fontSize: 12,
@@ -409,98 +310,126 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 4,
   },
-  exerciseSets: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  setsText: {
-    color: '#2563eb',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  exerciseDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  detailItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-  },
-  weightInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  weightInput: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    width: 70,
-    textAlign: 'center',
-    fontSize: 14,
-    backgroundColor: '#ffffff',
-  },
-  saveWeightButton: {
-    backgroundColor: '#2563eb',
-    padding: 8,
-    borderRadius: 6,
-    marginLeft: 6,
-  },
-  observacaoContainer: {
+  pendenteBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fffbeb',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  observacaoText: {
-    fontSize: 13,
-    color: '#92400e',
-    marginLeft: 8,
-    flex: 1,
+  pendenteText: {
+    fontSize: 12,
+    color: '#f59e0b',
+    fontWeight: '600',
+    marginLeft: 4,
   },
-  concluirButton: {
+  alunoInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: '#eff6ff',
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  concluirButtonText: {
+  alunoNome: {
+    fontSize: 12,
     color: '#2563eb',
     fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 8,
+    marginLeft: 4,
   },
-  notesCard: {
-    flexDirection: 'row',
-    backgroundColor: '#f8fafc',
-    padding: 20,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2563eb',
-  },
-  notesText: {
-    flex: 1,
-    fontSize: 14,
+  treinoNome: {
+    fontSize: 18,
+    fontWeight: '600',
     color: '#1f2937',
-    marginLeft: 12,
-    lineHeight: 20,
+    marginBottom: 12,
+  },
+  treinoMeta: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  metaText: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginLeft: 6,
+  },
+  progressContainer: {
+    marginTop: 8,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  progressLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  progressValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2563eb',
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#2563eb',
+    borderRadius: 3,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    marginTop: 60,
+  },
+  emptyStateIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 15,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  emptyStateButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 15,
+    marginLeft: 8,
   },
 });
