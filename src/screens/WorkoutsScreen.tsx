@@ -1,110 +1,244 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
+import TreinoService, { Treino, Exercicio } from '../services/treinoService';
 
-type Exercise = {
-  name: string;
-  sets: number;
-  reps: string;
-  rest: string;
+type RouteParams = {
+  treinoId: string;
 };
 
 export default function WorkoutDetailScreen() {
-  const workout = {
-    name: 'Peito e Tríceps',
-    duration: '60 minutos',
-    difficulty: 'Intermediário',
-    exercises: [
-      { name: 'Supino Reto', sets: 4, reps: '10-12', rest: '60s' },
-      { name: 'Supino Inclinado', sets: 3, reps: '10-12', rest: '60s' },
-      { name: 'Crucifixo', sets: 3, reps: '12-15', rest: '45s' },
-      { name: 'Tríceps Corda', sets: 4, reps: '12-15', rest: '45s' },
-      { name: 'Tríceps Francês', sets: 3, reps: '10-12', rest: '60s' },
-    ] as Exercise[],
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { user } = useAuth();
+  const { treinoId } = route.params as RouteParams;
+  
+  const [treino, setTreino] = useState<Treino | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [cargaInput, setCargaInput] = useState<{[key: string]: string}>({});
+
+  useEffect(() => {
+    carregarTreino();
+  }, [treinoId]);
+
+  const carregarTreino = async () => {
+    const treinos = await TreinoService.getAllTreinos();
+    const treinoEncontrado = treinos.find(t => t.id === treinoId);
+    setTreino(treinoEncontrado || null);
+    setLoading(false);
   };
 
-  const renderExercise = (exercise: Exercise, index: number) => (
-    <View key={index} style={styles.exerciseCard}>
-      <View style={styles.exerciseHeader}>
-        <Text style={styles.exerciseName}>{exercise.name}</Text>
-        <View style={styles.exerciseSets}>
-          <Text style={styles.setsText}>{exercise.sets} séries</Text>
-        </View>
-      </View>
-      
-      <View style={styles.exerciseDetails}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Repetições</Text>
-          <Text style={styles.detailValue}>{exercise.reps}</Text>
-        </View>
-        
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Descanso</Text>
-          <Text style={styles.detailValue}>{exercise.rest}</Text>
-        </View>
-        
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Carga</Text>
-          <View style={styles.weightInput}>
-            <Text style={styles.weightPlaceholder}>-- kg</Text>
+  const handleConcluirExercicio = async (exercicioId: string) => {
+    if (!treino) return;
+    
+    await TreinoService.concluirExercicio(treino.id, exercicioId);
+    await carregarTreino();
+    
+    Alert.alert('✅', 'Exercício concluído!');
+  };
+
+  const handleSalvarCarga = async (exercicioId: string) => {
+    if (!treino || !cargaInput[exercicioId]) return;
+    
+    await TreinoService.adicionarCarga(
+      treino.id, 
+      exercicioId, 
+      cargaInput[exercicioId]
+    );
+    
+    await carregarTreino();
+    setCargaInput(prev => ({ ...prev, [exercicioId]: '' }));
+    
+    Alert.alert('💪', 'Carga registrada!');
+  };
+
+  const renderExercicio = (exercicio: Exercicio, index: number) => {
+    const isConcluido = exercicio.concluido;
+    const cargaAtual = exercicio.carga || cargaInput[exercicio.id] || '';
+
+    return (
+      <View 
+        key={exercicio.id} 
+        style={[styles.exerciseCard, isConcluido && styles.exerciseCardConcluido]}
+      >
+        <View style={styles.exerciseHeader}>
+          <View style={styles.exerciseTitleContainer}>
+            <Text style={styles.exerciseName}>{exercicio.nome}</Text>
+            {isConcluido && (
+              <View style={styles.concluidoBadge}>
+                <Icon name="check-circle" size={16} color="#10b981" />
+                <Text style={styles.concluidoText}>Concluído</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.exerciseSets}>
+            <Text style={styles.setsText}>{exercicio.series} séries</Text>
           </View>
         </View>
+        
+        <View style={styles.exerciseDetails}>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Repetições</Text>
+            <Text style={styles.detailValue}>{exercicio.repeticoes}</Text>
+          </View>
+          
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Descanso</Text>
+            <Text style={styles.detailValue}>{exercicio.descanso}</Text>
+          </View>
+          
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Carga</Text>
+            {cargaAtual ? (
+              <Text style={styles.detailValue}>{cargaAtual} kg</Text>
+            ) : (
+              <View style={styles.weightInputContainer}>
+                <TextInput
+                  style={styles.weightInput}
+                  placeholder="kg"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="numeric"
+                  value={cargaInput[exercicio.id]}
+                  onChangeText={(text) => 
+                    setCargaInput(prev => ({ ...prev, [exercicio.id]: text }))
+                  }
+                />
+                <TouchableOpacity
+                  style={styles.saveWeightButton}
+                  onPress={() => handleSalvarCarga(exercicio.id)}
+                >
+                  <Icon name="check" size={16} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {exercicio.observacao && (
+          <View style={styles.observacaoContainer}>
+            <Icon name="info-outline" size={14} color="#6b7280" />
+            <Text style={styles.observacaoText}>{exercicio.observacao}</Text>
+          </View>
+        )}
+        
+        {!isConcluido && (
+          <TouchableOpacity
+            style={styles.concluirButton}
+            onPress={() => handleConcluirExercicio(exercicio.id)}
+          >
+            <Icon name="check-circle-outline" size={20} color="#2563eb" />
+            <Text style={styles.concluirButtonText}>Marcar como concluído</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      
-      <View style={styles.exerciseActions}>
-        <TouchableOpacity style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>Notas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionButton, styles.primaryAction]}>
-          <Text style={styles.primaryActionText}>Concluir</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Carregando treino...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!treino) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Icon name="error-outline" size={48} color="#dc2626" />
+          <Text style={styles.errorText}>Treino não encontrado</Text>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>Voltar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {/* Header */}
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
-          <Text style={styles.workoutName}>{workout.name}</Text>
-          <View style={styles.workoutMeta}>
-            <Text style={styles.metaItem}>⏱ {workout.duration}</Text>
-            <Text style={styles.metaItem}>⚡ {workout.difficulty}</Text>
+          <TouchableOpacity
+            style={styles.backIcon}
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="arrow-back" size={24} color="#1f2937" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
+            <Text style={styles.workoutName}>{treino.nome}</Text>
+            <View style={styles.workoutMeta}>
+              <View style={styles.metaItem}>
+                <Icon name="access-time" size={16} color="#6b7280" />
+                <Text style={styles.metaText}>{treino.duracao}</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Icon name="fitness-center" size={16} color="#6b7280" />
+                <Text style={styles.metaText}>{treino.nivel}</Text>
+              </View>
+            </View>
+            <View style={styles.dayBadge}>
+              <Icon name="event" size={14} color="#2563eb" />
+              <Text style={styles.dayBadgeText}>{treino.diaSemana}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Start Button */}
-        <TouchableOpacity style={styles.startButton}>
-          <Text style={styles.startButtonText}>Iniciar Treino</Text>
-        </TouchableOpacity>
-
-        {/* Exercises List */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Exercícios</Text>
-          
-          {workout.exercises.map((exercise, index) => 
-            renderExercise(exercise, index)
-          )}
-        </View>
-
-        {/* Notes Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notas do Personal</Text>
-          <View style={styles.notesCard}>
-            <Text style={styles.notesText}>
-              • Mantenha as costas bem apoiadas no banco
-              {'\n'}• Controle a descida do peso
-              {'\n'}• Expire na fase concêntrica do movimento
+        <View style={styles.progressSummary}>
+          <View style={styles.progressItem}>
+            <Text style={styles.progressLabel}>Exercícios</Text>
+            <Text style={styles.progressValue}>
+              {treino.exercicios.filter(e => e.concluido).length}/{treino.exercicios.length}
+            </Text>
+          </View>
+          <View style={styles.progressDivider} />
+          <View style={styles.progressItem}>
+            <Text style={styles.progressLabel}>Progresso</Text>
+            <Text style={styles.progressValue}>
+              {Math.round((treino.exercicios.filter(e => e.concluido).length / treino.exercicios.length) * 100)}%
             </Text>
           </View>
         </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Exercícios</Text>
+          {treino.exercicios.map((exercicio, index) => 
+            renderExercicio(exercicio, index)
+          )}
+        </View>
+
+        {treino.notasPersonal && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notas do Personal</Text>
+            <View style={styles.notesCard}>
+              <Icon name="fitness-center" size={20} color="#2563eb" />
+              <Text style={styles.notesText}>{treino.notasPersonal}</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -113,83 +247,176 @@ export default function WorkoutDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f8fafc',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748b',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#dc2626',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  backButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
   header: {
     backgroundColor: '#ffffff',
-    padding: 24,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#e5e7eb',
+  },
+  backIcon: {
+    marginBottom: 16,
+  },
+  headerContent: {
+    alignItems: 'center',
   },
   workoutName: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2d3436',
+    color: '#1f2937',
     marginBottom: 12,
   },
   workoutMeta: {
     flexDirection: 'row',
+    marginBottom: 12,
   },
   metaItem: {
-    fontSize: 16,
-    color: '#636e72',
-    marginRight: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 12,
   },
-  startButton: {
-    backgroundColor: '#1a73e8',
-    margin: 20,
-    paddingVertical: 18,
-    borderRadius: 12,
+  metaText: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginLeft: 6,
+  },
+  dayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  dayBadgeText: {
+    fontSize: 14,
+    color: '#2563eb',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  progressSummary: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    marginTop: 8,
+    padding: 20,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  progressItem: {
+    flex: 1,
     alignItems: 'center',
   },
-  startButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
+  progressLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  progressValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2563eb',
+  },
+  progressDivider: {
+    width: 1,
+    backgroundColor: '#e5e7eb',
   },
   section: {
     backgroundColor: '#ffffff',
-    marginTop: 16,
+    marginTop: 8,
     padding: 20,
-    borderRadius: 12,
-    marginHorizontal: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#2d3436',
-    marginBottom: 16,
+    color: '#1f2937',
+    marginBottom: 20,
   },
   exerciseCard: {
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    backgroundColor: '#f8fafc',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  exerciseCardConcluido: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
   },
   exerciseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  exerciseTitleContainer: {
+    flex: 1,
   },
   exerciseName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2d3436',
-    flex: 1,
+    color: '#1f2937',
+    marginBottom: 6,
+  },
+  concluidoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+  },
+  concluidoText: {
+    fontSize: 12,
+    color: '#10b981',
+    fontWeight: '600',
+    marginLeft: 4,
   },
   exerciseSets: {
-    backgroundColor: '#e8f0fe',
+    backgroundColor: '#eff6ff',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   setsText: {
-    color: '#1a73e8',
+    color: '#2563eb',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -204,61 +431,76 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    color: '#636e72',
+    color: '#6b7280',
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2d3436',
+    color: '#1f2937',
+  },
+  weightInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   weightInput: {
     borderWidth: 1,
-    borderColor: '#dfe6e9',
+    borderColor: '#e5e7eb',
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  weightPlaceholder: {
-    color: '#95a5a6',
+    width: 70,
+    textAlign: 'center',
     fontSize: 14,
+    backgroundColor: '#ffffff',
   },
-  exerciseActions: {
+  saveWeightButton: {
+    backgroundColor: '#2563eb',
+    padding: 8,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  observacaoContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#dfe6e9',
-    backgroundColor: '#f8f9fa',
+    marginBottom: 16,
   },
-  actionButtonText: {
-    color: '#636e72',
-    fontWeight: '500',
+  observacaoText: {
+    fontSize: 13,
+    color: '#92400e',
+    marginLeft: 8,
+    flex: 1,
   },
-  primaryAction: {
-    backgroundColor: '#1a73e8',
-    borderColor: '#1a73e8',
+  concluirButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#eff6ff',
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  primaryActionText: {
-    color: '#ffffff',
+  concluirButtonText: {
+    color: '#2563eb',
     fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 8,
   },
   notesCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
+    flexDirection: 'row',
+    backgroundColor: '#f8fafc',
+    padding: 20,
+    borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#1a73e8',
+    borderLeftColor: '#2563eb',
   },
   notesText: {
+    flex: 1,
     fontSize: 14,
-    color: '#2d3436',
+    color: '#1f2937',
+    marginLeft: 12,
     lineHeight: 20,
   },
 });

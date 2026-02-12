@@ -36,7 +36,7 @@ export default function TabNavigator() {
         },
       }}
     >
-      {/* Dashboard condicional */}
+      {/* Dashboard condicional  */}
       <Tab.Screen
         name="Dashboard"
         component={userType === 'personal' ? PersonalDashboardScreen : DashboardScreen}
@@ -48,7 +48,7 @@ export default function TabNavigator() {
         }}
       />
       
-      {/* Treinos */}
+      {/* Treinos  */}
       <Tab.Screen
         name="Workouts"
         component={WorkoutsScreen}
@@ -60,7 +60,7 @@ export default function TabNavigator() {
         }}
       />
       
-      {/* Perfil  */}
+      {/* Perfil */}
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}

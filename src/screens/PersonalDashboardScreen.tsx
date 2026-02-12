@@ -67,7 +67,11 @@ export default function PersonalDashboardScreen() {
   }, [user]);
 
   const handleCriarTreino = (alunoId: string, alunoNome: string) => {
-    alert(`Criar treino para ${alunoNome}`);
+  // @ts-ignore - Rota será tipada futuamente
+    navigation.navigate('CreateWorkout', { 
+      alunoId, 
+      alunoNome 
+    });
   };
 
   const getStatusConfig = (status: string) => {
