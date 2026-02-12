@@ -38,7 +38,7 @@ export default function CreateWorkoutScreen() {
   const [loading, setLoading] = useState(false);
   const [nomeTreino, setNomeTreino] = useState('');
   const [diaSemana, setDiaSemana] = useState('');
-  const [duracao, setDuracao] = useState('60 min');
+  const [duracao, setDuracao] = useState('60');
   const [nivel, setNivel] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Intermediário');
   const [notas, setNotas] = useState('');
   const [exercicios, setExercicios] = useState<ExercicioForm[]>([
@@ -46,8 +46,8 @@ export default function CreateWorkoutScreen() {
       id: String(Date.now()),
       nome: '',
       series: '3',
-      repeticoes: '10-12',
-      descanso: '60s',
+      repeticoes: '12',
+      descanso: '60',
       observacao: '',
     },
   ]);
@@ -69,8 +69,8 @@ export default function CreateWorkoutScreen() {
         id: String(Date.now() + Math.random()),
         nome: '',
         series: '3',
-        repeticoes: '10-12',
-        descanso: '60s',
+        repeticoes: '12',
+        descanso: '60',
         observacao: '',
       },
     ]);
@@ -120,29 +120,25 @@ export default function CreateWorkoutScreen() {
         dataCriacao: new Date().toISOString(),
         dataAtribuida: new Date().toLocaleDateString('pt-BR'),
         diaSemana,
-        duracao,
+        duracao: `${duracao} min`,
         nivel,
         notasPersonal: notas || undefined,
         exercicios: exercicios.map(e => ({
           id: String(Date.now() + Math.random()),
           nome: e.nome,
           series: Number(e.series),
-          repeticoes: e.repeticoes,
-          descanso: e.descanso,
+          repeticoes: `${e.repeticoes}`,
+          descanso: `${e.descanso}s`,
           observacao: e.observacao || undefined,
         })),
       });
 
-      Alert.alert(
-        '✅ Sucesso!',
-        `Treino criado para ${alunoNome}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      Alert.alert('Sucesso', `Treino criado para ${alunoNome}`, [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível criar o treino');
     } finally {
@@ -214,35 +210,39 @@ export default function CreateWorkoutScreen() {
 
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
-                <Text style={styles.label}>Duração</Text>
+                <Text style={styles.label}>Duração (min)</Text>
                 <TextInput
                   style={styles.input}
                   value={duracao}
                   onChangeText={setDuracao}
+                  keyboardType="numeric"
+                  placeholder="60"
+                  placeholderTextColor="#94a3b8"
+                  maxLength={3}
                 />
               </View>
+            </View>
 
-              <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Nível</Text>
-                <View style={styles.nivelContainer}>
-                  {['Iniciante', 'Intermediário', 'Avançado'].map((n) => (
-                    <TouchableOpacity
-                      key={n}
-                      style={[
-                        styles.nivelButton,
-                        nivel === n && styles.nivelButtonActive
-                      ]}
-                      onPress={() => setNivel(n as any)}
-                    >
-                      <Text style={[
-                        styles.nivelButtonText,
-                        nivel === n && styles.nivelButtonTextActive
-                      ]}>
-                        {n}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nível</Text>
+              <View style={styles.nivelContainer}>
+                {['Iniciante', 'Intermediário', 'Avançado'].map((n) => (
+                  <TouchableOpacity
+                    key={n}
+                    style={[
+                      styles.nivelButton,
+                      nivel === n && styles.nivelButtonActive
+                    ]}
+                    onPress={() => setNivel(n as any)}
+                  >
+                    <Text style={[
+                      styles.nivelButtonText,
+                      nivel === n && styles.nivelButtonTextActive
+                    ]}>
+                      {n}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
           </View>
@@ -297,6 +297,9 @@ export default function CreateWorkoutScreen() {
                         atualizarExercicio(exercicio.id, 'series', text)
                       }
                       keyboardType="numeric"
+                      placeholder="3"
+                      placeholderTextColor="#94a3b8"
+                      maxLength={2}
                     />
                   </View>
 
@@ -308,17 +311,25 @@ export default function CreateWorkoutScreen() {
                       onChangeText={(text) => 
                         atualizarExercicio(exercicio.id, 'repeticoes', text)
                       }
+                      keyboardType="numeric"
+                      placeholder="12"
+                      placeholderTextColor="#94a3b8"
+                      maxLength={3}
                     />
                   </View>
 
                   <View style={[styles.inputGroup, { flex: 1 }]}>
-                    <Text style={styles.label}>Descanso</Text>
+                    <Text style={styles.label}>Descanso (s)</Text>
                     <TextInput
                       style={styles.input}
                       value={exercicio.descanso}
                       onChangeText={(text) => 
                         atualizarExercicio(exercicio.id, 'descanso', text)
                       }
+                      keyboardType="numeric"
+                      placeholder="60"
+                      placeholderTextColor="#94a3b8"
+                      maxLength={3}
                     />
                   </View>
                 </View>
@@ -499,22 +510,26 @@ const styles = StyleSheet.create({
   nivelContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 8,
   },
   nivelButton: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
     backgroundColor: '#f1f5f9',
-    marginHorizontal: 2,
+    marginHorizontal: 4,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   nivelButtonActive: {
     backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
   },
   nivelButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#64748b',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   nivelButtonTextActive: {
     color: '#ffffff',
