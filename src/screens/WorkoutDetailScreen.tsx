@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import TreinoService, { Treino, Exercicio } from '../services/treinoService';
@@ -30,11 +30,13 @@ export default function WorkoutDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [cargaInput, setCargaInput] = useState<{[key: string]: string}>({});
 
-  useEffect(() => {
-    if (treinoId) {
-      carregarTreino();
-    }
-  }, [treinoId]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (treinoId) {
+        carregarTreino();
+      }
+    }, [treinoId])
+  );
 
   const carregarTreino = async () => {
     try {
@@ -54,28 +56,32 @@ export default function WorkoutDetailScreen() {
     try {
       await TreinoService.concluirExercicio(treino.id, exercicioId);
       await carregarTreino();
-      Alert.alert('✅', 'Exercício concluído!');
+      Alert.alert('Sucesso', 'Exercício concluído!');
     } catch (error) {
       Alert.alert('Erro', 'Não foi possível concluir o exercício');
     }
   };
 
   const handleSalvarCarga = async (exercicioId: string) => {
-    if (!treino || !cargaInput[exercicioId]) return;
+  if (!treino || !cargaInput[exercicioId]) return;
+  
+  try {
+    await TreinoService.adicionarCarga(
+      treino.id, 
+      exercicioId, 
+      cargaInput[exercicioId]
+    );
     
-    try {
-      await TreinoService.adicionarCarga(
-        treino.id, 
-        exercicioId, 
-        cargaInput[exercicioId]
-      );
-      
-      await carregarTreino();
-      setCargaInput(prev => ({ ...prev, [exercicioId]: '' }));
-      Alert.alert('💪', 'Carga registrada!');
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível registrar a carga');
-    }
+    await carregarTreino();
+    setCargaInput(prev => ({ ...prev, [exercicioId]: '' }));
+    Alert.alert('Sucesso', 'Carga registrada!');
+  } catch (error) {
+    Alert.alert('Erro', 'Não foi possível registrar a carga');
+  }
+};
+
+  const podeConcluirExercicio = () => {
+    return user?.type === 'aluno';
   };
 
   const renderExercicio = (exercicio: Exercicio, index: number) => {
@@ -147,7 +153,8 @@ export default function WorkoutDetailScreen() {
           </View>
         ) : null}
         
-        {!isConcluido && (
+        {/* BOTÃO DE CONCLUIR */}
+        {podeConcluirExercicio() && !isConcluido && (
           <TouchableOpacity
             style={styles.concluirButton}
             onPress={() => handleConcluirExercicio(exercicio.id)}
@@ -155,6 +162,17 @@ export default function WorkoutDetailScreen() {
             <Icon name="check-circle-outline" size={20} color="#2563eb" />
             <Text style={styles.concluirButtonText}>Marcar como concluído</Text>
           </TouchableOpacity>
+        )}
+
+        {!podeConcluirExercicio() && (
+          <View style={styles.personalHint}>
+            <Icon name="remove-red-eye" size={16} color="#6b7280" />
+            <Text style={styles.personalHintText}>
+              {isConcluido 
+                ? 'Aluno já concluiu este exercício' 
+                : 'Aluno ainda não concluiu este exercício'}
+            </Text>
+          </View>
         )}
       </View>
     );
@@ -254,7 +272,17 @@ export default function WorkoutDetailScreen() {
               <Text style={styles.notesText}>{treino.notasPersonal}</Text>
             </View>
           </View>
-        ) : null}
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notas do Personal</Text>
+            <View style={styles.emptyNotesCard}>
+              <Icon name="info-outline" size={20} color="#9ca3af" />
+              <Text style={styles.emptyNotesText}>
+                O personal ainda não adicionou nenhuma nota para este treino.
+              </Text>
+            </View>
+          </View>
+        )}
         
         <View style={styles.footerSpace} />
       </ScrollView>
@@ -506,6 +534,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 8,
   },
+  personalHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  personalHintText: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
   notesCard: {
     flexDirection: 'row',
     backgroundColor: '#f8fafc',
@@ -520,6 +562,24 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginLeft: 12,
     lineHeight: 20,
+  },
+  emptyNotesCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
+  },
+  emptyNotesText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#9ca3af',
+    marginLeft: 12,
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
   footerSpace: {
     height: 20,
