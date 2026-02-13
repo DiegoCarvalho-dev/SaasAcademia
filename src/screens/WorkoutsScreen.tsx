@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import TreinoService, { Treino } from '../services/treinoService';
@@ -21,9 +21,12 @@ export default function WorkoutsScreen() {
   const [treinos, setTreinos] = useState<Treino[]>([]);
   const [alunosMap, setAlunosMap] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    carregarDados();
-  }, [user]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarDados();
+    }, [user])
+  );
 
   const carregarDados = async () => {
     if (!user) return;
@@ -53,7 +56,9 @@ export default function WorkoutsScreen() {
     }
   };
 
-  const getDayColor = (dia: string) => {
+  const getDayColor = (dia: string, concluido: boolean) => {
+    if (concluido) return '#10b981'; // Verde para concluído
+    
     const cores: Record<string, string> = {
       'Segunda-feira': '#2563eb',
       'Terça-feira': '#7c3aed',
@@ -66,8 +71,17 @@ export default function WorkoutsScreen() {
     return cores[dia] || '#6b7280';
   };
 
+  const getStatusTreino = (treino: Treino) => {
+    const totalExercicios = treino.exercicios.length;
+    const concluidos = treino.exercicios.filter(e => e.concluido).length;
+    
+    if (concluidos === 0) return 'nao_iniciado';
+    if (concluidos === totalExercicios) return 'concluido';
+    return 'em_andamento';
+  };
+
   const handleVerTreino = (treinoId: string) => {
-    // @ts-ignore - Rota será tipada futuramente
+    // @ts-ignore
     navigation.navigate('WorkoutDetail', { treinoId });
   };
 
@@ -138,6 +152,9 @@ export default function WorkoutsScreen() {
               const progresso = treino.exercicios.length > 0
                 ? Math.round((treino.exercicios.filter(e => e.concluido).length / treino.exercicios.length) * 100)
                 : 0;
+              
+              const statusTreino = getStatusTreino(treino);
+              const diaColor = getDayColor(treino.diaSemana, statusTreino === 'concluido');
 
               return (
                 <TouchableOpacity
@@ -147,23 +164,30 @@ export default function WorkoutsScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.treinoHeader}>
-                    <View style={[styles.dayBadge, { backgroundColor: getDayColor(treino.diaSemana) + '15' }]}>
-                      <Text style={[styles.dayBadgeText, { color: getDayColor(treino.diaSemana) }]}>
+                    <View style={[styles.dayBadge, { backgroundColor: diaColor + '15' }]}>
+                      <Text style={[styles.dayBadgeText, { color: diaColor }]}>
                         {treino.diaSemana}
                       </Text>
                     </View>
                     
                     {user?.type === 'aluno' ? (
                       <View style={styles.statusContainer}>
-                        {progresso === 100 ? (
+                        {statusTreino === 'concluido' && (
                           <View style={styles.concluidoBadge}>
                             <Icon name="check-circle" size={14} color="#10b981" />
                             <Text style={styles.concluidoText}>Concluído</Text>
                           </View>
-                        ) : (
+                        )}
+                        {statusTreino === 'em_andamento' && (
                           <View style={styles.pendenteBadge}>
                             <Icon name="schedule" size={14} color="#f59e0b" />
                             <Text style={styles.pendenteText}>Em andamento</Text>
+                          </View>
+                        )}
+                        {statusTreino === 'nao_iniciado' && (
+                          <View style={styles.naoIniciadoBadge}>
+                            <Icon name="fitness-center" size={14} color="#6b7280" />
+                            <Text style={styles.naoIniciadoText}>A fazer</Text>
                           </View>
                         )}
                       </View>
@@ -321,6 +345,20 @@ const styles = StyleSheet.create({
   pendenteText: {
     fontSize: 12,
     color: '#f59e0b',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  naoIniciadoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  naoIniciadoText: {
+    fontSize: 12,
+    color: '#6b7280',
     fontWeight: '600',
     marginLeft: 4,
   },
