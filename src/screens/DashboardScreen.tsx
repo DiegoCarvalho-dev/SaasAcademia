@@ -64,6 +64,7 @@ export default function DashboardScreen() {
       caloriesBurned: number;
     };
     nextWorkout: {
+      id: string;
       name: string;
       time: string;
       day: string;
@@ -91,20 +92,30 @@ export default function DashboardScreen() {
       const treinosAluno = await TreinoService.getTreinosByAluno(user.id);
       setTreinos(treinosAluno);
 
+      // Calcular streak de dias consecutivos
+      const streak = calcularStreak(treinosAluno);
+
+      // Calcular treinos concluídos
       const treinosConcluidos = treinosAluno.filter(t => 
         t.exercicios.length > 0 && t.exercicios.every((e: any) => e.concluido)
       ).length;
 
+      // Calcular peso total
       const totalPeso = treinosAluno.reduce((acc, treino) => 
         acc + treino.exercicios.reduce((sum: number, ex: any) => 
           sum + (Number(ex.carga) || 0), 0
         ), 0
       );
 
-      const proximoTreino = treinosAluno.find(t => 
+      // Calcular calorias
+      const calorias = (treinosConcluidos * 100) + (Math.floor(totalPeso / 100) * 50);
+
+      // Buscar próximo treino 
+      const proximoTreino = treinosAluno.find((t: any) => 
         !t.exercicios.every((e: any) => e.concluido)
       );
 
+      // Calcular progresso mensal
       let progressoMensal = 0;
       if (treinosAluno.length > 0) {
         const somaProgresso = treinosAluno.reduce((acc, treino) => {
@@ -121,11 +132,12 @@ export default function DashboardScreen() {
         type: 'aluno',
         stats: {
           completedWorkouts: treinosConcluidos,
-          currentStreak: 0,
+          currentStreak: streak,
           totalWeight: totalPeso,
-          caloriesBurned: 0,
+          caloriesBurned: calorias,
         },
         nextWorkout: proximoTreino ? {
+          id: proximoTreino.id,
           name: proximoTreino.nome,
           time: 'Hoje',
           day: proximoTreino.diaSemana,
@@ -137,6 +149,14 @@ export default function DashboardScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const calcularStreak = (treinos: any[]) => {
+    const treinosConcluidos = treinos.filter((t: any) => 
+      t.exercicios.length > 0 && t.exercicios.every((e: any) => e.concluido)
+    ).length;
+    
+    return treinosConcluidos;
   };
 
   if (loading) {
@@ -250,11 +270,8 @@ export default function DashboardScreen() {
             <TouchableOpacity 
               style={styles.nextWorkoutCard}
               onPress={() => {
-                const treino = treinos.find(t => t.nome === userData.nextWorkout?.name);
-                if (treino) {
-                  // @ts-ignore
-                  navigation.navigate('WorkoutDetail', { treinoId: treino.id });
-                }
+                // @ts-ignore
+                navigation.navigate('WorkoutDetail', { treinoId: userData.nextWorkout?.id });
               }}
             >
               <View style={styles.workoutInfo}>
@@ -266,18 +283,9 @@ export default function DashboardScreen() {
                   </View>
                 </View>
               </View>
-              <TouchableOpacity 
-                style={styles.startButton}
-                onPress={() => {
-                  const treino = treinos.find(t => t.nome === userData.nextWorkout?.name);
-                  if (treino) {
-                    // @ts-ignore
-                    navigation.navigate('WorkoutDetail', { treinoId: treino.id });
-                  }
-                }}
-              >
+              <View style={styles.startButton}>
                 <Text style={styles.startButtonText}>Iniciar</Text>
-              </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           </View>
         ) : (
