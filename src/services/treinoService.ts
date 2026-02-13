@@ -42,9 +42,22 @@ class TreinoService {
     return treinos.filter(t => t.personalId === personalId);
   }
 
+  async getTreinosByAlunoEDia(alunoId: string, diaSemana: string): Promise<Treino[]> {
+    const treinos = await this.getAllTreinos();
+    return treinos.filter(t => t.alunoId === alunoId && t.diaSemana === diaSemana);
+  }
+
   async criarTreino(treino: Omit<Treino, 'id'>): Promise<Treino> {
     const treinos = await this.getAllTreinos();
     
+    const treinoExistente = treinos.find(t => 
+      t.alunoId === treino.alunoId && t.diaSemana === treino.diaSemana
+    );
+
+    if (treinoExistente) {
+      throw new Error(`Já existe um treino para ${treino.diaSemana}`);
+    }
+
     const novoTreino = {
       ...treino,
       id: String(Date.now()),
