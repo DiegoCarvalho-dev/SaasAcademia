@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -36,11 +36,13 @@ export default function CreateWorkoutScreen() {
   const { alunoId, alunoNome } = route.params as RouteParams;
 
   const [loading, setLoading] = useState(false);
+  const [loadingDias, setLoadingDias] = useState(true);
   const [nomeTreino, setNomeTreino] = useState('');
   const [diaSemana, setDiaSemana] = useState('');
   const [duracao, setDuracao] = useState('60');
   const [nivel, setNivel] = useState<'Iniciante' | 'Intermediário' | 'Avançado'>('Intermediário');
   const [notas, setNotas] = useState('');
+  const [diasDisponiveis, setDiasDisponiveis] = useState<string[]>([]);
   const [exercicios, setExercicios] = useState<ExercicioForm[]>([
     {
       id: String(Date.now()),
@@ -52,7 +54,7 @@ export default function CreateWorkoutScreen() {
     },
   ]);
 
-  const diasSemana = [
+  const todosDias = [
     'Segunda-feira',
     'Terça-feira',
     'Quarta-feira',
@@ -61,6 +63,24 @@ export default function CreateWorkoutScreen() {
     'Sábado',
     'Domingo',
   ];
+
+  useEffect(() => {
+    carregarDiasDisponiveis();
+  }, []);
+
+  const carregarDiasDisponiveis = async () => {
+    try {
+      const treinosAluno = await TreinoService.getTreinosByAluno(alunoId);
+      const diasOcupados = treinosAluno.map(t => t.diaSemana);
+      const disponiveis = todosDias.filter(dia => !diasOcupados.includes(dia));
+      setDiasDisponiveis(disponiveis);
+    } catch (error) {
+      console.error('Erro ao carregar dias disponíveis:', error);
+      setDiasDisponiveis(todosDias);
+    } finally {
+      setLoadingDias(false);
+    }
+  };
 
   const adicionarExercicio = () => {
     setExercicios([
@@ -139,8 +159,8 @@ export default function CreateWorkoutScreen() {
           onPress: () => navigation.goBack(),
         },
       ]);
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível criar o treino');
+    } catch (error: any) {
+      Alert.alert('Erro', error.message || 'Não foi possível criar o treino');
     } finally {
       setLoading(false);
     }
@@ -183,29 +203,40 @@ export default function CreateWorkoutScreen() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Dia da Semana</Text>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                style={styles.diasScroll}
-              >
-                {diasSemana.map((dia) => (
-                  <TouchableOpacity
-                    key={dia}
-                    style={[
-                      styles.diaButton,
-                      diaSemana === dia && styles.diaButtonActive
-                    ]}
-                    onPress={() => setDiaSemana(dia)}
-                  >
-                    <Text style={[
-                      styles.diaButtonText,
-                      diaSemana === dia && styles.diaButtonTextActive
-                    ]}>
-                      {dia}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {loadingDias ? (
+                <ActivityIndicator size="small" color="#2563eb" style={styles.diasLoader} />
+              ) : diasDisponiveis.length === 0 ? (
+                <View style={styles.semDiasContainer}>
+                  <Icon name="info-outline" size={20} color="#f59e0b" />
+                  <Text style={styles.semDiasText}>
+                    Este aluno já tem treinos em todos os dias da semana
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.diasScroll}
+                >
+                  {diasDisponiveis.map((dia) => (
+                    <TouchableOpacity
+                      key={dia}
+                      style={[
+                        styles.diaButton,
+                        diaSemana === dia && styles.diaButtonActive
+                      ]}
+                      onPress={() => setDiaSemana(dia)}
+                    >
+                      <Text style={[
+                        styles.diaButtonText,
+                        diaSemana === dia && styles.diaButtonTextActive
+                      ]}>
+                        {dia}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
             </View>
 
             <View style={styles.row}>
@@ -481,6 +512,24 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  diasLoader: {
+    marginVertical: 10,
+  },
+  semDiasContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  semDiasText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#92400e',
+    marginLeft: 12,
   },
   diasScroll: {
     flexDirection: 'row',
