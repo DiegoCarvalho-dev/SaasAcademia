@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import UserService from '../services/userService';
+import TreinoService from '../services/treinoService';
 
 const StatIcon = ({ type }: { type: string }) => {
   const getIcon = () => {
@@ -52,6 +53,7 @@ export default function DashboardScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [personalName, setPersonalName] = useState('');
+  const [treinos, setTreinos] = useState<any[]>([]);
   const [userData, setUserData] = useState<{
     name: string;
     type: 'aluno' | 'personal';
@@ -69,34 +71,73 @@ export default function DashboardScreen() {
     monthlyProgress: number;
   } | null>(null);
 
-  useEffect(() => {
-    async function loadUserData() {
-      if (user) {
-        if (user.personalId) {
-          const personal = await UserService.getPersonalById(user.personalId);
-          if (personal) {
-            setPersonalName(personal.name);
-          }
-        }
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarDados();
+    }, [user])
+  );
 
-        setUserData({
-          name: user.name,
-          type: 'aluno',
-          stats: {
-            completedWorkouts: 0,
-            currentStreak: 0,
-            totalWeight: 0,
-            caloriesBurned: 0,
-          },
-          nextWorkout: null,
-          monthlyProgress: 0,
-        });
+  const carregarDados = async () => {
+    if (!user) return;
+
+    try {
+      if (user.personalId) {
+        const personal = await UserService.getPersonalById(user.personalId);
+        if (personal) {
+          setPersonalName(personal.name);
+        }
       }
+
+      const treinosAluno = await TreinoService.getTreinosByAluno(user.id);
+      setTreinos(treinosAluno);
+
+      const treinosConcluidos = treinosAluno.filter(t => 
+        t.exercicios.length > 0 && t.exercicios.every((e: any) => e.concluido)
+      ).length;
+
+      const totalPeso = treinosAluno.reduce((acc, treino) => 
+        acc + treino.exercicios.reduce((sum: number, ex: any) => 
+          sum + (Number(ex.carga) || 0), 0
+        ), 0
+      );
+
+      const proximoTreino = treinosAluno.find(t => 
+        !t.exercicios.every((e: any) => e.concluido)
+      );
+
+      let progressoMensal = 0;
+      if (treinosAluno.length > 0) {
+        const somaProgresso = treinosAluno.reduce((acc, treino) => {
+          const progresso = treino.exercicios.length > 0
+            ? (treino.exercicios.filter((e: any) => e.concluido).length / treino.exercicios.length) * 100
+            : 0;
+          return acc + progresso;
+        }, 0);
+        progressoMensal = Math.round(somaProgresso / treinosAluno.length);
+      }
+
+      setUserData({
+        name: user.name,
+        type: 'aluno',
+        stats: {
+          completedWorkouts: treinosConcluidos,
+          currentStreak: 0,
+          totalWeight: totalPeso,
+          caloriesBurned: 0,
+        },
+        nextWorkout: proximoTreino ? {
+          name: proximoTreino.nome,
+          time: 'Hoje',
+          day: proximoTreino.diaSemana,
+        } : null,
+        monthlyProgress: progressoMensal,
+      });
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
       setLoading(false);
     }
-
-    loadUserData();
-  }, [user]);
+  };
 
   if (loading) {
     return (
@@ -114,7 +155,7 @@ export default function DashboardScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Não foi possível carregar os dados</Text>
-          <TouchableOpacity style={styles.retryButton}>
+          <TouchableOpacity style={styles.retryButton} onPress={carregarDados}>
             <Text style={styles.retryText}>Tentar novamente</Text>
           </TouchableOpacity>
         </View>
@@ -153,7 +194,6 @@ export default function DashboardScreen() {
               <View style={styles.personalBadge}>
                 <Icon name="fitness-center" size={14} color="#6b7280" />
                 <Text style={styles.personalBadgeText}>Personal: {personalName}</Text>
-                  Personal: {personalName}               
               </View>
             )}
           </View>
@@ -207,7 +247,16 @@ export default function DashboardScreen() {
                 <Text style={styles.dayBadgeText}>{userData.nextWorkout.day}</Text>
               </View>
             </View>
-            <View style={styles.nextWorkoutCard}>
+            <TouchableOpacity 
+              style={styles.nextWorkoutCard}
+              onPress={() => {
+                const treino = treinos.find(t => t.nome === userData.nextWorkout?.name);
+                if (treino) {
+                  // @ts-ignore
+                  navigation.navigate('WorkoutDetail', { treinoId: treino.id });
+                }
+              }}
+            >
               <View style={styles.workoutInfo}>
                 <Text style={styles.workoutName}>{userData.nextWorkout.name}</Text>
                 <View style={styles.workoutMeta}>
@@ -217,10 +266,19 @@ export default function DashboardScreen() {
                   </View>
                 </View>
               </View>
-              <TouchableOpacity style={styles.startButton}>
-                <Text style={styles.startButtonText}>Iniciar Treino</Text>
+              <TouchableOpacity 
+                style={styles.startButton}
+                onPress={() => {
+                  const treino = treinos.find(t => t.nome === userData.nextWorkout?.name);
+                  if (treino) {
+                    // @ts-ignore
+                    navigation.navigate('WorkoutDetail', { treinoId: treino.id });
+                  }
+                }}
+              >
+                <Text style={styles.startButtonText}>Iniciar</Text>
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.section}>
