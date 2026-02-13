@@ -63,30 +63,34 @@ export default function WorkoutDetailScreen() {
   };
 
   const handleSalvarCarga = async (exercicioId: string) => {
-  if (!treino || !cargaInput[exercicioId]) return;
-  
-  try {
-    await TreinoService.adicionarCarga(
-      treino.id, 
-      exercicioId, 
-      cargaInput[exercicioId]
-    );
+    if (!treino || !cargaInput[exercicioId]) return;
     
-    await carregarTreino();
-    setCargaInput(prev => ({ ...prev, [exercicioId]: '' }));
-    Alert.alert('Sucesso', 'Carga registrada!');
-  } catch (error) {
-    Alert.alert('Erro', 'Não foi possível registrar a carga');
-  }
-};
+    try {
+      await TreinoService.adicionarCarga(
+        treino.id, 
+        exercicioId, 
+        cargaInput[exercicioId]
+      );
+      
+      await carregarTreino();
+      setCargaInput(prev => ({ ...prev, [exercicioId]: '' }));
+      Alert.alert('Sucesso', 'Carga registrada!');
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível registrar a carga');
+    }
+  };
 
   const podeConcluirExercicio = () => {
     return user?.type === 'aluno';
   };
 
+  const podeRegistrarCarga = () => {
+    return user?.type === 'aluno';
+  };
+
   const renderExercicio = (exercicio: Exercicio, index: number) => {
     const isConcluido = exercicio.concluido || false;
-    const cargaAtual = exercicio.carga || cargaInput[exercicio.id] || '';
+    const cargaAtual = exercicio.carga || '';
 
     return (
       <View 
@@ -124,24 +128,29 @@ export default function WorkoutDetailScreen() {
             {cargaAtual ? (
               <Text style={styles.detailValue}>{cargaAtual} kg</Text>
             ) : (
-              <View style={styles.weightInputContainer}>
-                <TextInput
-                  style={styles.weightInput}
-                  placeholder="kg"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="numeric"
-                  value={cargaInput[exercicio.id]}
-                  onChangeText={(text) => 
-                    setCargaInput(prev => ({ ...prev, [exercicio.id]: text }))
-                  }
-                />
-                <TouchableOpacity
-                  style={styles.saveWeightButton}
-                  onPress={() => handleSalvarCarga(exercicio.id)}
-                >
-                  <Icon name="check" size={16} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
+              podeRegistrarCarga() ? (
+                <View style={styles.weightInputContainer}>
+                  <TextInput
+                    style={styles.weightInput}
+                    placeholder="kg"
+                    placeholderTextColor="#94a3b8"
+                    keyboardType="numeric"
+                    value={cargaInput[exercicio.id]}
+                    onChangeText={(text) => 
+                      setCargaInput(prev => ({ ...prev, [exercicio.id]: text }))
+                    }
+                    maxLength={4}
+                  />
+                  <TouchableOpacity
+                    style={styles.saveWeightButton}
+                    onPress={() => handleSalvarCarga(exercicio.id)}
+                  >
+                    <Icon name="check" size={16} color="#ffffff" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={styles.detailValue}>-- kg</Text>
+              )
             )}
           </View>
         </View>
@@ -153,7 +162,7 @@ export default function WorkoutDetailScreen() {
           </View>
         ) : null}
         
-        {/* BOTÃO DE CONCLUIR */}
+        {/* BOTÃO DE CONCLUIR SÓ PARA ALUNO */}
         {podeConcluirExercicio() && !isConcluido && (
           <TouchableOpacity
             style={styles.concluirButton}
@@ -164,6 +173,7 @@ export default function WorkoutDetailScreen() {
           </TouchableOpacity>
         )}
 
+        {/* MENSAGEM PARA PERSONAL */}
         {!podeConcluirExercicio() && (
           <View style={styles.personalHint}>
             <Icon name="remove-red-eye" size={16} color="#6b7280" />
