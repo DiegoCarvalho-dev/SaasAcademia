@@ -85,8 +85,8 @@ cd gymapp
 # 3. Instale as dependências
 npm install
 
-# 4. Execute o projeto
-npx expo start --tunnel
+# 4. Execute o projeto (modo LAN - celular na mesma rede)
+npx expo start
 
 # 5. Escaneie o QR Code com o Expo Go
 ```
